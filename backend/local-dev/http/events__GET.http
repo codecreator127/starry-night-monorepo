@@ -1,0 +1,5 @@
+### get all events
+GET http://localhost:8080/events
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTc2Mjg0MDQ1NiwiZXhwIjoxNzYyOTI2ODU2fQ.yOHjNYqgVoHF_S4db1WhpMj8v_HZh9t5hV-62WiMito

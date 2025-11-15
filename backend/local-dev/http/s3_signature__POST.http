@@ -1,0 +1,11 @@
+### get presigned s3 url for upload
+POST http://localhost:8080/s3/signature
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTc2MjgzNTM5MiwiZXhwIjoxNzYyOTIxNzkyfQ.19KNWq8vWg1FQ6LiHyHQKRO4lyphLaSTeqCm2Dozeq8
+
+{
+    "eventId": 1,
+	"fileName": "image.png",
+	"fileType": "png"
+}

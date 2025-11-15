@@ -1,0 +1,279 @@
+openapi: 3.0.1
+info:
+  title: Full Stack Application API
+  description: API documentation for the Full Stack Application
+  version: 1.0.0
+security:
+  - bearerAuth: []  
+
+paths:  
+  /auth/login:
+    post:
+      security: [] # No authentication required for logout
+      tags:
+        - Authentication
+      summary: User login for JWT
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+  /auth/logout:
+    post:
+      security: [] # No authentication required for logout
+      tags:
+        - Authentication
+      summary: Logout user
+      operationId: logout
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logout successful
+                    
+  /auth/register:
+    post:
+      security: [] # No authentication required for registration
+      tags:
+        - Authentication
+      summary: User registration for JWT
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+
+  /users/{username}:
+    get:
+      tags:
+        - Users
+      summary: Get user by username
+      operationId: getUserByUsername
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+                
+  /s3/signature:
+    post:
+      tags:
+        - S3
+      summary: Get S3 signed URL
+      operationId: getS3SignedUrl
+      requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/S3SignatureDto'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signedRequest:
+                    type: string
+                  url:
+                    type: string
+                
+  /events:
+    get:
+      tags:
+        - Events
+      summary: Get all events
+      operationId: getEvents
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventsList'
+    post:
+      tags:
+        - Events
+      summary: Create a new event
+      operationId: createEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventDto'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDto'
+  /events/{id}:
+    get:
+      tags:
+        - Events
+      summary: Get event by ID
+      operationId: getEventById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDto'
+                
+    put:
+      tags:
+        - Events
+      summary: Edit event by ID
+      operationId: updateEventById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody: 
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventDto'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDto'
+                
+    delete:
+      tags:
+        - Events
+      summary: Delete event by ID
+      operationId: deleteEventById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Event deleted successfully
+                
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    EventsList:
+      type: array
+      items:
+        $ref: '#/components/schemas/EventDto'
+                  
+    EventDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+        videoUrl:
+          type: string
+      
+    S3SignatureDto:
+      type: object
+      required:
+        - eventId
+        - fileName
+        - fileType
+      properties:
+        eventId:
+          type: integer
+        fileName:
+          type: string
+        description:
+          type: string
+        fileType:
+          type: string
