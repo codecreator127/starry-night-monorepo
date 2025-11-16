@@ -1,0 +1,55 @@
+name: Terraform + Backend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      S3_BUCKET: starry-night-media
+      EC2_USER: ubuntu
+      BACKEND_JAR_NAME: backend.jar
+
+    defaults:
+      run:
+        working-directory: ./infra
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Build backend
+        run: mvn clean package -DskipTests
+
+      - name: Upload artifact to S3
+        run: aws s3 cp target/${{ env.BACKEND_JAR_NAME }} s3://${{ env.S3_BUCKET }}/${{ env.BACKEND_JAR_NAME }} --region ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      - name: Get EC2 Public IP from Terraform
+        id: get_ip
+        run: |
+          backend_ip=$(terraform output -raw backend_ip)
+          echo "EC2_IP=$backend_ip" >> $GITHUB_ENV
