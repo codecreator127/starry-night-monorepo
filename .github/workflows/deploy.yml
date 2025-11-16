@@ -3,7 +3,7 @@ name: Terraform + Backend CI/CD
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
@@ -15,11 +15,11 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       S3_BUCKET: starry-night-media
       EC2_USER: ubuntu
-      BACKEND_JAR_NAME: backend.jar
+      BACKEND_JAR_NAME: fullstack-1.0-SNAPSHOT.jar
 
     defaults:
       run:
-        working-directory: ./infra
+        working-directory: ./backend
 
     steps:
       - name: Checkout code
@@ -37,6 +37,18 @@ jobs:
       - name: Upload artifact to S3
         run: aws s3 cp target/${{ env.BACKEND_JAR_NAME }} s3://${{ env.S3_BUCKET }}/${{ env.BACKEND_JAR_NAME }} --region ${{ env.AWS_REGION }}
 
+  deploy-infra:
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    defaults:
+      run:
+        working-directory: ./infra
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -51,12 +63,15 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        working-directory: ./infra
+
+      - name: Terraform Plan
+        run: terraform plan
+        working-directory: ./infra
+
+      - name: Import existing S3 bucket
+        run: terraform state list | grep aws_s3_bucket.media_bucket || terraform import aws_s3_bucket.media_bucket starry-night-media
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
-
-      - name: Get EC2 Public IP from Terraform
-        id: get_ip
-        run: |
-          backend_ip=$(terraform output -raw backend_ip)
-          echo "EC2_IP=$backend_ip" >> $GITHUB_ENV
+        working-directory: ./infra

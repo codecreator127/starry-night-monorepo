@@ -10,7 +10,7 @@ resource "aws_s3_bucket" "media_bucket" {
 ############################
 ## Assume role policy for EC2
 
-data "aws_iam_policy_document" "ec2_assume_role" {
+data "aws_iam_policy_document" "backend_role_assume" {
   statement {
     effect = "Allow"
 
@@ -24,8 +24,8 @@ data "aws_iam_policy_document" "ec2_assume_role" {
 }
 
 resource "aws_iam_role" "ec2_role" {
-  name               = "backend-ec2-role"
-  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+  name               = "backend-ec2-role-tf"
+  assume_role_policy = data.aws_iam_policy_document.backend_role_assume.json
 }
 
 ## Policy: Allow EC2 to read/write to media bucket
@@ -47,7 +47,7 @@ resource "aws_iam_role_policy" "media_access_policy" {
 
 ## Instance Profile
 resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "backend-ec2-profile"
+  name = "backend-ec2-profile-tf"
   role = aws_iam_role.ec2_role.name
 }
 
@@ -55,7 +55,7 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 # Security Groups
 ############################
 resource "aws_security_group" "backend_sg" {
-  name        = "backend-sg"
+  name        = "backend-sg-tf"
   description = "Allow SSH, backend traffic, and Postgres"
   vpc_id      = var.vpc_id
 
@@ -154,7 +154,7 @@ variable "vpc_id" {
   default = "vpc-0eeaa6ff77da19c28"
 }
 variable "subnet_id" {
-  default = "subnet-0dcb3f3f5e2e8b6a1"
+  default = "subnet-0ac726e995d2c54f8"
 }
 variable "ami" {
   default = "ami-0b8d527345fdace59"
