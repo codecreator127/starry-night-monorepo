@@ -141,11 +141,25 @@ output "media_bucket_name" {
 ############################
 # Variables
 ############################
-variable "region" {}
-variable "artifact_bucket" {}
-variable "media_bucket_name" {}
-variable "vpc_id" {}
-variable "subnet_id" {}
-variable "ami" {}
-variable "instance_type" {}
+variable "region" {
+  default = "ap-southeast-2"
+}
+variable "artifact_bucket" {
+  default = "starry-night-media"
+}
+variable "media_bucket_name" {
+  default = "starry-night-media"
+}
+variable "vpc_id" {
+  default = "vpc-0eeaa6ff77da19c28"
+}
+variable "subnet_id" {
+  default = "subnet-0dcb3f3f5e2e8b6a1"
+}
+variable "ami" {
+  default = "ami-0b8d527345fdace59"
+}
+variable "instance_type" {
+  default = "t2.micro"
+}
 variable "backend_port" { default = 8080 }

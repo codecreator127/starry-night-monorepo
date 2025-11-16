@@ -4,3 +4,7 @@
 **/.idea/**
 **/.env/**
 .env
+**/.terraform/**
+infra/.terraform.lock.hcl
+infra/.terraform.tfstate.lock.info
+infra/terraform.tfstate
