@@ -64,14 +64,5 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Import existing S3 bucket
-        run: terraform state list | grep aws_s3_bucket.media_bucket || terraform import aws_s3_bucket.media_bucket starry-night-media
-
-      - name: Import IAM role if missing
-        run: terraform state list | grep aws_iam_role.ec2_role || terraform import aws_iam_role.ec2_role backend-ec2-role-tf
-
-      - name: Import Security Group if missing
-        run: terraform state list | grep aws_security_group.backend_sg || terraform import aws_security_group.backend_sg sg-0bc0052f2f186e2f3
-
       - name: Terraform Apply
         run: terraform apply -auto-approve

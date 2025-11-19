@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
   //   withCredentials: true,
 });
 
@@ -33,8 +33,6 @@ api.interceptors.response.use(
 // Generic helper functions
 export const get = async <T>(url: string, params?: any): Promise<T> => {
   const res = await api.get(url, { params });
-  console.log(`${process.env.NEXT_PUBLIC_API_URL}${url}`);
-
   return res.data;
 };
 
