@@ -142,6 +142,12 @@ resource "aws_instance" "backend" {
                   -dname "CN=3.106.116.226, OU=Dev, O=Fullstack, L=City, ST=State, C=US"
               fi
 
+              # Wait for Postgres to start
+              until sudo -u postgres psql -c '\l'; do
+                echo "Waiting for Postgres to be ready..."
+                sleep 5
+              done
+
               # Run backend with SSL
               sudo -u ubuntu nohup java -jar fullstack-1.0-SNAPSHOT.jar \
                 --server.address=0.0.0.0 \
