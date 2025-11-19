@@ -65,10 +65,6 @@ jobs:
         run: terraform init
         working-directory: ./infra
 
-      - name: Terraform Plan
-        run: terraform plan
-        working-directory: ./infra
-
       - name: Import existing S3 bucket
         run: terraform state list | grep aws_s3_bucket.media_bucket || terraform import aws_s3_bucket.media_bucket starry-night-media
 

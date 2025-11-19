@@ -109,17 +109,17 @@ resource "aws_instance" "backend" {
               cd /home/ubuntu/app
 
               # Download backend artifact from S3 (if needed)
-              aws s3 cp s3://${var.artifact_bucket}/backend.jar ./backend.jar
+              aws s3 cp s3://${var.artifact_bucket}/fullstack-1.0-SNAPSHOT.jar ./fullstack-1.0-SNAPSHOT.jar
 
               # Start Postgres
               sudo service postgresql start
 
               # Set up basic Postgres database
-              sudo -u postgres psql -c "CREATE USER backend_user WITH PASSWORD 'password';"
-              sudo -u postgres psql -c "CREATE DATABASE backend_db OWNER backend_user;"
+              sudo -u postgres psql -c "CREATE USER fullstack WITH PASSWORD 'password';"
+              sudo -u postgres psql -c "CREATE DATABASE fullstack OWNER fullstack;"
 
               # Run backend
-              nohup java -jar backend.jar &
+              nohup java -jar fullstack-1.0-SNAPSHOT.jar --server.address=0.0.0.0 &
               EOF
 
   tags = {

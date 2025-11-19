@@ -17,28 +17,30 @@ import java.util.Map;
 @Service
 public class S3Service {
 
-    @Value("${AWS_ACCESS_KEY_ID}")
-    private String accessKey;
+    // don't need these when deploying in AWS EC2
+    // @Value("${AWS_ACCESS_KEY_ID}")
+    // private String accessKey;
 
-    @Value("${AWS_SECRET_ACCESS_KEY}")
-    private String secretKey;
+    // @Value("${AWS_SECRET_ACCESS_KEY}")
+    // private String secretKey;
 
-    @Value("${AWS_S3_BUCKET}")
-    private String bucket;
+     @Value("${AWS_S3_BUCKET:starry-night-media}")
+     private String bucket;
 
-    @Value("${AWS_REGION}")
-    private String region;
+     @Value("${AWS_REGION:ap-southeast-2}")
+     private String region;
 
     public Map<String, String> generatePresignedUrl(Map<String, String> body) {
         String fileName = body.get("fileName");
         String fileType = body.get("fileType");
         String eventId = body.get("eventId");
 
-        AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
+        // AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey,
+        // secretKey);
 
         S3Presigner presigner = S3Presigner.builder()
                 .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(credentials))
+//                .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .build();
 
         String key = String.format("uploads/%s/%s", eventId, fileName);
