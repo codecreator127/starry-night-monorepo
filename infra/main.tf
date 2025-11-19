@@ -103,34 +103,56 @@ resource "aws_instance" "backend" {
               #!/bin/bash
               set -e
 
+              # Update packages
               sudo apt-get update
-              sudo apt-get install -y unzip curl postgresql postgresql-contrib openjdk-17-jdk-headless
+              sudo apt-get install -y openjdk-17-jdk-headless postgresql postgresql-contrib unzip wget curl
 
               # Install AWS CLI v2
               curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
               unzip awscliv2.zip
               sudo ./aws/install
-              rm awscliv2.zip
 
               # Create app directory
-              mkdir -p /home/ubuntu/app
+              mkdir -p /home/ubuntu/app/ssl
               cd /home/ubuntu/app
 
-              # Download backend artifact from S3
+              # Download backend JAR from S3
               aws s3 cp s3://${var.artifact_bucket}/fullstack-1.0-SNAPSHOT.jar ./fullstack-1.0-SNAPSHOT.jar
 
-              # Start Postgres
+              # Start PostgreSQL
               sudo systemctl enable postgresql
               sudo systemctl start postgresql
 
-              # Set up basic Postgres database
-              sudo -u postgres psql -c "CREATE USER fullstack WITH PASSWORD 'password';"
-              sudo -u postgres psql -c "CREATE DATABASE fullstack OWNER fullstack;"
+              # Create Postgres DB and user
+              sudo -u postgres psql -c "CREATE USER fullstack WITH PASSWORD 'password';" || true
+              sudo -u postgres psql -c "CREATE DATABASE fullstack OWNER fullstack;" || true
 
-              # Run backend
-              nohup java -jar fullstack-1.0-SNAPSHOT.jar --server.address=0.0.0.0 > nohup.out 2>&1 &
+              # Generate self-signed SSL certificate if not exists
+              SSL_FILE="/home/ubuntu/app/ssl/fullstack.p12"
+              if [ ! -f "$SSL_FILE" ]; then
+                keytool -genkeypair \
+                  -alias fullstack \
+                  -keyalg RSA \
+                  -keysize 2048 \
+                  -storetype PKCS12 \
+                  -keystore "$SSL_FILE" \
+                  -validity 3650 \
+                  -storepass changeit \
+                  -keypass changeit \
+                  -dname "CN=3.106.116.226, OU=Dev, O=Fullstack, L=City, ST=State, C=US"
+              fi
+
+              # Run backend with SSL
+              sudo -u ubuntu nohup java -jar fullstack-1.0-SNAPSHOT.jar \
+                --server.address=0.0.0.0 \
+                --server.port=8443 \
+                --server.ssl.enabled=true \
+                --server.ssl.key-store=/home/ubuntu/app/ssl/fullstack.p12 \
+                --server.ssl.key-store-password=changeit \
+                --server.ssl.key-store-type=PKCS12 \
+                --server.ssl.key-alias=fullstack \
+                > /home/ubuntu/app/backend.log 2>&1 &
               EOF
-
 
   tags = {
     Name = "backend-ec2"
