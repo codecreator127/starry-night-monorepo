@@ -101,26 +101,36 @@ resource "aws_instance" "backend" {
 
   user_data = <<-EOF
               #!/bin/bash
+              set -e
+
               sudo apt-get update
-              sudo apt-get install -y openjdk-17-jdk postgresql postgresql-contrib wget unzip awscli
+              sudo apt-get install -y unzip curl postgresql postgresql-contrib openjdk-17-jdk-headless
+
+              # Install AWS CLI v2
+              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              unzip awscliv2.zip
+              sudo ./aws/install
+              rm awscliv2.zip
 
               # Create app directory
               mkdir -p /home/ubuntu/app
               cd /home/ubuntu/app
 
-              # Download backend artifact from S3 (if needed)
+              # Download backend artifact from S3
               aws s3 cp s3://${var.artifact_bucket}/fullstack-1.0-SNAPSHOT.jar ./fullstack-1.0-SNAPSHOT.jar
 
               # Start Postgres
-              sudo service postgresql start
+              sudo systemctl enable postgresql
+              sudo systemctl start postgresql
 
               # Set up basic Postgres database
               sudo -u postgres psql -c "CREATE USER fullstack WITH PASSWORD 'password';"
               sudo -u postgres psql -c "CREATE DATABASE fullstack OWNER fullstack;"
 
               # Run backend
-              nohup java -jar fullstack-1.0-SNAPSHOT.jar --server.address=0.0.0.0 &
+              nohup java -jar fullstack-1.0-SNAPSHOT.jar --server.address=0.0.0.0 > nohup.out 2>&1 &
               EOF
+
 
   tags = {
     Name = "backend-ec2"
