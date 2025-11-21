@@ -200,4 +200,4 @@ variable "ami" {
 variable "instance_type" {
   default = "t2.micro"
 }
-variable "backend_port" { default = 8080 }
+variable "backend_port" { default = 8443 }
