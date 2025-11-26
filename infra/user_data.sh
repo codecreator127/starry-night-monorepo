@@ -3,7 +3,7 @@ set -e
 
 # Update packages
 apt-get update
-apt-get install -y openjdk-17-jdk-headless unzip wget curl nginx
+apt-get install -y openjdk-17-jdk-headless unzip wget curl nginx postgresql postgresql-contrib
 
 # Install Certbot for Nginx
 apt-get install -y certbot python3-certbot-nginx
@@ -12,6 +12,14 @@ apt-get install -y certbot python3-certbot-nginx
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
 ./aws/install
+
+# Start PostgreSQL
+systemctl enable postgresql
+systemctl start postgresql
+
+# Create Postgres DB and user if not exists
+sudo -u postgres psql -c "CREATE USER fullstack WITH PASSWORD 'password';" || true
+sudo -u postgres psql -c "CREATE DATABASE fullstack OWNER fullstack;" || true
 
 # Create app directory
 mkdir -p /home/ubuntu/app
@@ -40,6 +48,12 @@ ln -sf /etc/nginx/sites-available/backend /etc/nginx/sites-enabled/backend
 rm -f /etc/nginx/sites-enabled/default
 
 systemctl restart nginx
+
+# Wait for PostgreSQL to be fully ready
+until sudo -u postgres psql -c '\l'; do
+  echo "Waiting for Postgres to be ready..."
+  sleep 5
+done
 
 # Start Spring Boot app (no SSL inside Spring Boot)
 nohup java -jar fullstack.jar \
