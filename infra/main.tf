@@ -1,24 +1,85 @@
-############################
-# Existing S3 Media Bucket
-############################
-resource "aws_s3_bucket" "media_bucket" {
-  bucket = var.media_bucket_name
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+  required_version = ">= 1.2.0"
+}
+
+provider "aws" {
+  region = var.region
 }
 
 ############################
-# IAM Policies (Native)
+# Variables
 ############################
-## Assume role policy for EC2
+variable "region" {
+  description = "AWS region"
+  default     = "ap-southeast-2"
+}
 
+variable "ami" {
+  description = "AMI id to use for EC2 (compatible with your OS choice)"
+  default     = "ami-0b8d527345fdace59"
+}
+
+variable "instance_type" {
+  default = "t2.micro"
+}
+
+variable "vpc_id" {
+  default = "vpc-0eeaa6ff77da19c28"
+}
+
+variable "subnet_id" {
+  default = "subnet-0ac726e995d2c54f8"
+}
+
+variable "artifact_bucket" {
+  description = "S3 bucket name where backend JAR is stored"
+  default     = "starry-night-media"
+}
+
+variable "media_bucket_name" {
+  description = "Name for S3 media bucket"
+  default     = "starry-night-media"
+}
+
+variable "domain" {
+  description = "The FQDN for the backend (api.yourdomain.tld)"
+  default     = "api.codecreator127.xyz"
+}
+
+variable "letsencrypt_email" {
+  description = "Email used for Let's Encrypt registration"
+  default     = "codecreator127@gmail.com"
+}
+
+variable "key_name" {
+  description = "EC2 keypair name for SSH access (optional, leave empty to skip)"
+  default     = ""
+}
+
+############################
+# S3 media bucket (existing in your earlier config)
+############################
+resource "aws_s3_bucket" "media_bucket" {
+  bucket = var.media_bucket_name
+  acl    = "private"
+}
+
+############################
+# IAM Role and Instance Profile for EC2 (S3 access)
+############################
 data "aws_iam_policy_document" "backend_role_assume" {
   statement {
     effect = "Allow"
-
     principals {
       type        = "Service"
       identifiers = ["ec2.amazonaws.com"]
     }
-
     actions = ["sts:AssumeRole"]
   }
 }
@@ -28,14 +89,19 @@ resource "aws_iam_role" "ec2_role" {
   assume_role_policy = data.aws_iam_policy_document.backend_role_assume.json
 }
 
-## Policy: Allow EC2 to read/write to media bucket
-
 data "aws_iam_policy_document" "media_access" {
   statement {
     effect = "Allow"
-
-    actions = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
-    resources = ["${aws_s3_bucket.media_bucket.arn}/*"]
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:ListBucket"
+    ]
+    resources = [
+      aws_s3_bucket.media_bucket.arn,
+      "${aws_s3_bucket.media_bucket.arn}/*"
+    ]
   }
 }
 
@@ -45,35 +111,46 @@ resource "aws_iam_role_policy" "media_access_policy" {
   policy = data.aws_iam_policy_document.media_access.json
 }
 
-## Instance Profile
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "starry-night-backend-ec2-profile-tf"
   role = aws_iam_role.ec2_role.name
 }
 
 ############################
-# Security Groups
+# Security Group
 ############################
 resource "aws_security_group" "backend_sg" {
   name        = "backend-sg-tf"
-  description = "Allow SSH, backend traffic, and Postgres"
+  description = "Allow SSH, HTTP, HTTPS"
   vpc_id      = var.vpc_id
 
   ingress {
+    description = "SSH"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"] # tighten to your IP in production
   }
 
   ingress {
-    from_port   = var.backend_port
-    to_port     = var.backend_port
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Keep Postgres locked to localhost where appropriate
+  ingress {
+    description = "Postgres (localhost only)"
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
@@ -86,10 +163,14 @@ resource "aws_security_group" "backend_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name = "backend-sg-tf"
+  }
 }
 
 ############################
-# EC2 Backend Instance with Postgres + Backend
+# EC2 Instance
 ############################
 resource "aws_instance" "backend" {
   ami                         = var.ami
@@ -99,105 +180,30 @@ resource "aws_instance" "backend" {
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   associate_public_ip_address = true
 
-  user_data = <<-EOF
-              #!/bin/bash
-              set -e
+  user_data = templatefile("${path.module}/user_data.sh", {
+    artifact_bucket      = var.artifact_bucket
+    domain               = var.domain
+    letsencrypt_email    = var.letsencrypt_email
+  })
 
-              # Update packages
-              sudo apt-get update
-              sudo apt-get install -y openjdk-17-jdk-headless postgresql postgresql-contrib unzip wget curl
-
-              # Install AWS CLI v2
-              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-              unzip awscliv2.zip
-              sudo ./aws/install
-
-              # Create app directory
-              mkdir -p /home/ubuntu/app/ssl
-              cd /home/ubuntu/app
-
-              # Download backend JAR from S3
-              aws s3 cp s3://${var.artifact_bucket}/fullstack-1.0-SNAPSHOT.jar ./fullstack-1.0-SNAPSHOT.jar
-
-              # Start PostgreSQL
-              sudo systemctl enable postgresql
-              sudo systemctl start postgresql
-
-              # Create Postgres DB and user
-              sudo -u postgres psql -c "CREATE USER fullstack WITH PASSWORD 'password';" || true
-              sudo -u postgres psql -c "CREATE DATABASE fullstack OWNER fullstack;" || true
-
-              # Generate self-signed SSL certificate if not exists
-              SSL_FILE="/home/ubuntu/app/ssl/fullstack.p12"
-              if [ ! -f "$SSL_FILE" ]; then
-                keytool -genkeypair \
-                  -alias fullstack \
-                  -keyalg RSA \
-                  -keysize 2048 \
-                  -storetype PKCS12 \
-                  -keystore "$SSL_FILE" \
-                  -validity 3650 \
-                  -storepass changeit \
-                  -keypass changeit \
-                  -dname "CN=3.106.116.226, OU=Dev, O=Fullstack, L=City, ST=State, C=US"
-              fi
-
-              # Wait for Postgres to start
-              until sudo -u postgres psql -c '\l'; do
-                echo "Waiting for Postgres to be ready..."
-                sleep 5
-              done
-
-              # Run backend with SSL
-              sudo -u ubuntu nohup java -jar fullstack-1.0-SNAPSHOT.jar \
-                --server.address=0.0.0.0 \
-                --server.port=8443 \
-                --server.ssl.enabled=true \
-                --server.ssl.key-store=/home/ubuntu/app/ssl/fullstack.p12 \
-                --server.ssl.key-store-password=changeit \
-                --server.ssl.key-store-type=PKCS12 \
-                --server.ssl.key-alias=fullstack \
-                > /home/ubuntu/app/backend.log 2>&1 &
-              EOF
 
   tags = {
     Name = "backend-ec2"
   }
 }
 
+
 ############################
 # Outputs
 ############################
-output "backend_ip" {
+output "backend_public_ip" {
   value = aws_instance.backend.public_ip
 }
 
-output "media_bucket_name" {
-  value = aws_s3_bucket.media_bucket.bucket
+output "backend_public_dns" {
+  value = aws_instance.backend.public_dns
 }
 
-############################
-# Variables
-############################
-variable "region" {
-  default = "ap-southeast-2"
+output "backend_domain" {
+  value = var.domain
 }
-variable "artifact_bucket" {
-  default = "starry-night-media"
-}
-variable "media_bucket_name" {
-  default = "starry-night-media"
-}
-variable "vpc_id" {
-  default = "vpc-0eeaa6ff77da19c28"
-}
-variable "subnet_id" {
-  default = "subnet-0ac726e995d2c54f8"
-}
-variable "ami" {
-  default = "ami-0b8d527345fdace59"
-}
-variable "instance_type" {
-  default = "t2.micro"
-}
-variable "backend_port" { default = 8443 }
