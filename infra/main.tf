@@ -53,7 +53,6 @@ variable "key_name" {
 ############################
 resource "aws_s3_bucket" "media_bucket" {
   bucket = var.media_bucket_name
-  acl    = "private"
 }
 
 ############################
