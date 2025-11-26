@@ -15,7 +15,8 @@ public class WebConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**") // all endpoints
-                        .allowedOrigins("http://localhost:3000") // your FE
+//                        .allowedOrigins("http://localhost:3000")
+                        .allowedOrigins("https://codecreator127.xyz", "https://www.codecreator127.xyz")
                         .allowedMethods("GET", "POST", "PUT", "DELETE")
                         .allowCredentials(true);
             }
