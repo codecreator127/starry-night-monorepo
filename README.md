@@ -1,7 +1,28 @@
-Starry Night Fullstack Monorepo
+## Starry Night Fullstack Monorepo
 
 A digital showcase of sorts, this repo includes both the FE and the BE.
 
-To reploy, it requires an S3 bucket to hold the BE jar, which is then copied and deployed in an EC2 instance.
-
 FE is deployed on vercel. 
+
+
+## Versions
+
+There are 2 versions of deployment in this repo.
+
+1. AWS BE + Vercel FE
+This is the original deployment plan which follows this architecture diagram:
+
+
+With the BE hosted on an EC2, and the Postgres DB also ran in the same EC2. Originally wanted to do this way with an RDS, but RDS is too costly, hence just running the small DB in the EC2 for a PoC and test.
+
+Springboot BE in EC2 with an Nginx reverse proxy sitting on top of it taking care of SSL cert. Files stored in S3. Postgres DB set up locally in EC2.
+
+Check this out in the AWS branch.
+
+2. Oracle BE + Vercel FE + Supabase 
+
+Same as AWS set up, but ran in Oracle since they offer free VMs forever, and the storage done in Supabase.
+
+This is the free alternative to the AWS setup.
+
+Check this out in the master branch.
