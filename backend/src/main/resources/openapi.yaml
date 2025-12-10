@@ -103,18 +103,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserDto'
                 
-  /s3/signature:
+  /files/signature:
     post:
       tags:
-        - S3
-      summary: Get S3 signed URL
-      operationId: getS3SignedUrl
+        - Files
+      summary: Get signed URL for file upload
+      operationId: getFileSignedUrl
       requestBody:
           required: true
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/S3SignatureDto'
+                $ref: '#/components/schemas/FileSignatureDto'
       responses:
         '200':
           description: OK
@@ -262,7 +262,7 @@ components:
         videoUrl:
           type: string
       
-    S3SignatureDto:
+    FileSignatureDto:
       type: object
       required:
         - eventId

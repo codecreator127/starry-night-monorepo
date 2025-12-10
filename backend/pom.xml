@@ -7,8 +7,8 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.1</version> <!-- example: pick the latest 3.x -->
-        <relativePath/> <!-- lookup parent from Maven repo -->
+        <version>3.3.1</version>
+        <relativePath/>
     </parent>
 
     <groupId>com.fullstack</groupId>
@@ -23,10 +23,23 @@
 
 
     <dependencies>
+        <!-- Spring Boot DevTools (hot reload in dev) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Spring Boot Web (core for controllers, ResponseEntity, etc.) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
         <dependency>
@@ -35,7 +48,6 @@
             <version>1.18.30</version>
             <scope>provided</scope>
         </dependency>
-
 
         <!-- For @Validated, @NotNull, etc. -->
         <dependency>
@@ -57,14 +69,12 @@
             <version>2.2.22</version>
         </dependency>
 
-        <!-- For org.openapitools.jackson.nullable.Nullable -->
         <dependency>
             <groupId>org.openapitools</groupId>
             <artifactId>jackson-databind-nullable</artifactId>
             <version>0.2.6</version>
         </dependency>
 
-        <!-- Optional: javax.annotation if you’re on Java 17+ -->
         <dependency>
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
@@ -88,12 +98,6 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.7.3</version>
-        </dependency>
-
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>s3</artifactId>
-            <version>2.37.0</version>
         </dependency>
 
         <dependency>
@@ -149,16 +153,12 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <!-- Path to your OpenAPI spec file -->
                             <inputSpec>${project.basedir}/src/main/resources/openapi.yaml</inputSpec>
 
-                            <!-- Output directory for generated code -->
                             <output>${project.build.directory}/generated-sources/openapi</output>
 
-                            <!-- Use the Spring generator -->
                             <generatorName>spring</generatorName>
 
-                            <!-- Configure package structure -->
                             <apiPackage>com.fullstack.api</apiPackage>
                             <modelPackage>com.fullstack.model</modelPackage>
                             <invokerPackage>com.fullstack.invoker</invokerPackage>
@@ -170,7 +170,6 @@
                                 <useTags>true</useTags>
                             </configOptions>
 
-                            <!-- Don’t overwrite your manual code -->
                             <skipOverwrite>true</skipOverwrite>
                             <configOptions>
                                 <interfaceOnly>true</interfaceOnly>

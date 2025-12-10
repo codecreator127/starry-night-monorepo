@@ -1,10 +1,10 @@
 package com.fullstack.controller;
 
-import com.fullstack.api.S3Api;
-import com.fullstack.model.GetS3SignedUrl200Response;
-import com.fullstack.model.S3SignatureDto;
+import com.fullstack.api.FilesApi;
+import com.fullstack.model.FileSignatureDto;
+import com.fullstack.model.GetFileSignedUrl200Response;
 import com.fullstack.service.EventService;
-import com.fullstack.service.S3Service;
+import com.fullstack.service.FileService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,13 +13,13 @@ import java.util.Map;
 
 @RestController
 @AllArgsConstructor
-public class S3Controller implements S3Api {
+public class FileController implements FilesApi {
 
-    S3Service s3Service;
+    FileService fileService;
     EventService eventService;
 
     @Override
-    public ResponseEntity<GetS3SignedUrl200Response> getS3SignedUrl(S3SignatureDto body) {
+    public ResponseEntity<GetFileSignedUrl200Response> getFileSignedUrl(FileSignatureDto body) {
 
         String filename = body.getFileName();
         String fileType = body.getFileType();
@@ -33,15 +33,9 @@ public class S3Controller implements S3Api {
         }
 
 
-        Map<String, String> fileParams = Map.of(
-                "fileName", filename,
-                "fileType", fileType,
-                "eventId", eventId.toString()
-        );
+        Map<String, String> fileUrls = fileService.generatePresignedUploadUrl(filename);
 
-        Map<String, String> fileUrls = s3Service.generatePresignedUrl(fileParams);
-
-        GetS3SignedUrl200Response response = new GetS3SignedUrl200Response();
+        GetFileSignedUrl200Response response = new GetFileSignedUrl200Response();
         response.setUrl(fileUrls.get("publicUrl"));
         response.setSignedRequest(fileUrls.get("uploadUrl"));
 

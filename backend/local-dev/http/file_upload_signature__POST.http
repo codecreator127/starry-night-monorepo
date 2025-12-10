@@ -1,0 +1,11 @@
+### get presigned url for file upload
+POST http://localhost:8080/files/signature
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTc2NDk4NDA3MCwiZXhwIjoxNzY1MDcwNDcwfQ.k6mfFA1Gw1McBBhql_iWdrI29fYFdhTXfyTmI-mZaGY
+
+{
+    "eventId": 1,
+	"fileName": "image.png",
+	"fileType": "png"
+}
