@@ -7,7 +7,7 @@ FE is deployed on vercel.
 
 ## Versions
 
-There are 2 versions of deployment in this repo.
+There are multiple versions of deployment in this repo.
 
 1. AWS BE + Vercel FE
 This is the original deployment plan which follows this architecture diagram:
@@ -25,4 +25,8 @@ Same as AWS set up, but ran in Oracle since they offer free VMs forever, and the
 
 This is the free alternative to the AWS setup.
 
-Check this out in the master branch.
+Check this out in the free-tier branch.
+
+3. Vercel FE deployment only
+
+Completely FE with mocked data. This is for in the scenario when BE is unavailable, i.e. Oracle or AWS goes down, then show default events and disable login.

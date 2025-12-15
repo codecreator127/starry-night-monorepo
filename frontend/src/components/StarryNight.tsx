@@ -9,6 +9,8 @@ import CreateEventOverlay from './CreateEventOverlay';
 import RemoveEventOverlay from './RemoveEventOverlay';
 import { uploadFileToS3 } from '@/lib/s3';
 import EventDisplay from './EventDisplay';
+import { FALLBACK_EVENTS } from '@/utils/fallback';
+import { Event } from '@/data/event';
 
 interface Star {
   id: string;
@@ -17,16 +19,7 @@ interface Star {
   info: string;
 }
 
-interface Event {
-  id: number;
-  title: string;
-  description: string;
-  imageUrl: string | null;
-  videoUrl: string | null;
-}
-
 export default function StarryNight() {
-  const [hoveredStar, setHoveredStar] = useState<Star | null>(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -43,6 +36,8 @@ export default function StarryNight() {
   const [showRemoveEventOverlay, setShowRemoveEventOverlay] = useState(false);
   const [showLogoutPrompt, setShowLogoutPrompt] = useState(false);
 
+  const [fallbackMode, setFallbackMode] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem('jwt');
     if (token) {
@@ -54,6 +49,8 @@ export default function StarryNight() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === 'p') {
+        if (fallbackMode) return;
+
         if (isLoggedIn) {
           setShowLogoutPrompt((prev) => !prev);
         } else {
@@ -68,12 +65,18 @@ export default function StarryNight() {
   // --- fetch events
   useEffect(() => {
     const fetchEvents = async () => {
-      try {
-        const data = await getEvents();
-        setEvents(data);
-      } catch (err) {
-        console.error('Failed to fetch events:', err);
-      }
+      // TOOD: uncomment when BE is up
+      setEvents(FALLBACK_EVENTS);
+      setFallbackMode(true);
+      // try {
+      //   const data = await getEvents();
+      //   setEvents(data);
+      // } catch (err) {
+      //   console.error('Failed to fetch events:', err);
+      //   setEvents(FALLBACK_EVENTS);
+      //   setFallbackMode(true);
+      //   setIsLoggedIn(false);
+      // }
     };
     fetchEvents();
   }, []);
@@ -107,11 +110,18 @@ export default function StarryNight() {
   }, []);
 
   // --- zoom and drag
-  const handleWheel = (e: WheelEvent) => {
-    e.preventDefault();
-    const delta = -e.deltaY;
-    setScale((prev) => Math.min(Math.max(prev + delta * 0.001, 0.5), 3));
-  };
+const handleWheel = (e: WheelEvent) => {
+  e.preventDefault();
+
+const zoomIntensity = 0.002;
+
+setScale((prev) => {
+  const next = prev * Math.exp(-e.deltaY * zoomIntensity);
+  return Math.min(Math.max(next, 0.5), 6);
+});
+
+};
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -150,8 +160,6 @@ export default function StarryNight() {
         x: centerX - starX * zoomTargetScale,
         y: centerY - starY * zoomTargetScale,
       };
-
-      setHoveredStar(null);
       setIsDragging(false);
       setOffset(newOffset);
       setScale(zoomTargetScale);
@@ -308,7 +316,10 @@ export default function StarryNight() {
         className="absolute top-0 left-0 w-full h-full"
         style={{ transformOrigin: 'top left' }}
         animate={{ scale, x: offset.x, y: offset.y }}
-        transition={{ duration: 2.3, ease: 'easeInOut' }}
+          transition={{
+            duration: isDragging ? 0 : 2.3,
+            ease: 'linear',
+  }}
       >
         <svg className="absolute w-full h-full top-0 left-0">
           {stars.map((star, index) => {
@@ -333,37 +344,35 @@ export default function StarryNight() {
 
         {stars.map((star) => {
           const y = star.top + Math.sin(animationTick + Number(star.id)) * 2;
+          const event = events.find((e) => e.id === Number(star.id));
+
           return (
             <div
               key={star.id}
-              className="absolute w-8 h-8 bg-white rounded-full cursor-pointer hover:scale-150 transition-transform"
-              style={{ top: `${y}%`, left: `${star.left}%`, transform: 'translate(-50%, -50%)' }}
-              onMouseEnter={() => setHoveredStar(star)}
-              onMouseLeave={() => setHoveredStar(null)}
-              onClick={() => handleStarClick(star)}
-            />
+              className="absolute"
+              style={{
+                top: `${y}%`,
+                left: `${star.left}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              {/* Title label */}
+              {event && (
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-white text-xs font-medium opacity-80 pointer-events-none select-none">
+                  {event.title}
+                </div>
+              )}
+
+              {/* Star */}
+              <div
+                className="w-8 h-8 bg-white rounded-full cursor-pointer hover:scale-150 transition-transform"
+                onClick={() => handleStarClick(star)}
+              />
+            </div>
           );
         })}
       </motion.div>
 
-      {/* Tooltip */}
-      <AnimatePresence>
-        {hoveredStar && (
-          <motion.div
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: -10 }}
-            exit={{ opacity: 0 }}
-            className="absolute bg-gray-800 text-white text-sm px-2 py-1 rounded shadow-md pointer-events-none z-50"
-            style={{
-              top: `${hoveredStar.top - 5}%`,
-              left: `${hoveredStar.left}%`,
-              transform: 'translate(-50%, -100%)',
-            }}
-          >
-            {hoveredStar.info}
-          </motion.div>
-        )}
-      </AnimatePresence>
       {/* Logout Prompt */}
       <AnimatePresence>
         {showLogoutPrompt && (
@@ -387,7 +396,7 @@ export default function StarryNight() {
 
       {/* Login */}
       <AnimatePresence>
-        {showLogin && (
+        {showLogin && !fallbackMode && (
           <LoginOverlay
             onClose={() => setShowLogin(false)}
             onLoginSuccess={() => {
