@@ -50,10 +50,22 @@ export default function StarryNight() {
 
   const [fallbackMode, setFallbackMode] = useState(false);
 
-  const [viewport, setViewport] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
+  const [viewport, setViewport] = useState(() => ({
+    width: 0,
+    height: 0,
+  }));
+
+  useEffect(() => {
+    const update = () =>
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+
+    update(); // set initial value on mount
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   const referenceWidth = 400;
 
