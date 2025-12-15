@@ -2,15 +2,8 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
-
-interface Event {
-  id: number;
-  title: string;
-  description: string;
-  imageUrl: string | null;
-  videoUrl: string | null;
-}
+import { X, Github, ExternalLink } from 'lucide-react';
+import { Event } from '@/data/event';
 
 interface EventDisplayProps {
   event: Event;
@@ -18,7 +11,7 @@ interface EventDisplayProps {
 }
 
 export default function EventDisplay({ event, onClose }: EventDisplayProps) {
-  const { title, description, imageUrl, videoUrl } = event;
+  const { title, description, imageUrl, videoUrl, githubUrl, liveUrl } = event;
 
   return (
     <motion.div
@@ -31,7 +24,7 @@ export default function EventDisplay({ event, onClose }: EventDisplayProps) {
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
         exit={{ scale: 0.95 }}
-        className="relative flex flex-col items-center w-full max-w-4xl overflow-hidden"
+        className="relative flex flex-col items-center w-full max-w-4xl overflow-hidden bg-black/70 backdrop-blur-sm rounded-xl"
       >
         {/* Close button */}
         <button
@@ -40,13 +33,40 @@ export default function EventDisplay({ event, onClose }: EventDisplayProps) {
         >
           <X size={24} />
         </button>
+        {/* Corner links */}
+        {(githubUrl || liveUrl) && (
+          <div className="absolute top-4 left-4 flex items-center gap-4">
+            {githubUrl && (
+              <a
+                href={githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:text-gray-300 transition"
+                aria-label="View GitHub repository"
+              >
+                <Github size={24} />
+              </a>
+            )}
+
+            {liveUrl && (
+              <a
+                href={liveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:text-gray-300 transition"
+                aria-label="View live site"
+              >
+                <ExternalLink size={24} />
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Text Section */}
-        <div className="flex flex-col items-center justify-center p-6 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 md:mb-4 drop-shadow-lg">
-            {title}
-          </h2>
-          <p className="text-white drop-shadow-md">{description}</p>
+        <div className="flex flex-col items-center justify-center p-6 text-center gap-3">
+          <h2 className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg">{title}</h2>
+
+          <p className="text-white drop-shadow-md max-w-2xl">{description}</p>
         </div>
 
         {/* Media Section */}
@@ -57,6 +77,7 @@ export default function EventDisplay({ event, onClose }: EventDisplayProps) {
                 <img src={imageUrl} alt={title} className="max-w-full max-h-full object-contain" />
               </div>
             )}
+
             {videoUrl && (
               <div className="flex-1 w-full md:w-1/2 h-64 lg:h-80 flex items-center justify-center bg-black rounded-lg">
                 <video src={videoUrl} controls className="max-w-full max-h-full object-contain" />
