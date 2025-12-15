@@ -638,7 +638,7 @@ export default function StarryNight() {
               className="bg-white text-black p-6 rounded max-w-4xl w-full h-[90vh] overflow-auto flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-2xl font-bold mb-4">CV if you're interested 😎</h2>
+              <h2 className="text-2xl font-bold mb-4">{"CV if you're interested 😎"}</h2>
               <div className="flex-1 flex items-center justify-center overflow-auto">
                 <iframe
                   src="/cv.pdf#view=FitV"
