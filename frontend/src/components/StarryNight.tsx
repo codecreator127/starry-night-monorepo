@@ -31,7 +31,7 @@ export default function StarryNight() {
   const [isDragging, setIsDragging] = useState(false);
   const [animationTick, setAnimationTick] = useState(0);
   const [activeEvent, setActiveEvent] = useState<Event | null>(null);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null); // <-- New
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -44,10 +44,22 @@ export default function StarryNight() {
 
   const [fallbackMode, setFallbackMode] = useState(false);
 
-  const [viewport, setViewport] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
+  const [viewport, setViewport] = useState(() => ({
+    width: 0,
+    height: 0,
+  }));
+
+  useEffect(() => {
+    const update = () =>
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+
+    update(); // set initial value on mount
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   const referenceWidth = 400;
 
