@@ -19,13 +19,19 @@ interface Star {
   info: string;
 }
 
+interface CVStar {
+  id: string;
+  top: number;
+  left: number;
+}
+
 export default function StarryNight() {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [animationTick, setAnimationTick] = useState(0);
   const [activeEvent, setActiveEvent] = useState<Event | null>(null);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null); // <-- New
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +43,39 @@ export default function StarryNight() {
   const [showLogoutPrompt, setShowLogoutPrompt] = useState(false);
 
   const [fallbackMode, setFallbackMode] = useState(false);
+
+  const [viewport, setViewport] = useState(() => ({
+    width: 0,
+    height: 0,
+  }));
+
+  useEffect(() => {
+    const update = () =>
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+
+    update(); // set initial value on mount
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  const referenceWidth = 400;
+
+  useEffect(() => {
+    const handleResize = () =>
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const [cvStar] = useState<CVStar>({
+    id: 'cv',
+    top: 50,
+    left: 50,
+  });
+  const [showCV, setShowCV] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('jwt');
@@ -87,18 +126,29 @@ export default function StarryNight() {
   useEffect(() => {
     if (events.length === 0) return;
 
-    const paddingPercent = 10;
-    const newStars: Star[] = events.map((event, i) => ({
-      id: event.id.toString(),
-      left:
-        events.length === 1
-          ? 50
-          : paddingPercent + ((100 - 2 * paddingPercent) * i) / (events.length - 1),
-      top: 30 + Math.random() * 40,
-      info: `${event.title} - ${event.description.slice(0, 50)}${
-        event.description.length > 50 ? '...' : ''
-      }`,
-    }));
+    const radiusPercent = 40;
+    const centerX = cvStar.left;
+    const centerY = cvStar.top;
+
+    // Sort events by ID to ensure consistent ordering
+    const sortedEvents = [...events].sort((a, b) => a.id - b.id);
+
+    const newStars: Star[] = sortedEvents.map((event, i) => {
+      // Start at -90 degrees (12 o'clock) and go clockwise
+      // Subtract PI/2 to start at top, use positive angle for clockwise
+      const angle = -Math.PI / 2 + (2 * Math.PI * i) / sortedEvents.length;
+      const left = centerX + radiusPercent * Math.cos(angle);
+      const top = centerY + radiusPercent * Math.sin(angle);
+
+      return {
+        id: event.id.toString(),
+        left,
+        top,
+        info: `${event.title} - ${event.description.slice(0, 50)}${
+          event.description.length > 50 ? '...' : ''
+        }`,
+      };
+    });
 
     setStars(newStars);
   }, [events]);
@@ -138,6 +188,31 @@ export default function StarryNight() {
   };
   const handleMouseUp = () => setIsDragging(false);
 
+  const handleCVClick = (cvStar: CVStar) => {
+    // Zoom and show read-only event
+    const zoomTargetScale = 4;
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const starX = (cvStar.left / 100) * window.innerWidth;
+    const starY = (cvStar.top / 100) * window.innerHeight;
+
+    const newOffset = {
+      x: centerX - starX * zoomTargetScale,
+      y: centerY - starY * zoomTargetScale,
+    };
+    setIsDragging(false);
+    setOffset(newOffset);
+    setScale(zoomTargetScale);
+
+    setTimeout(() => setShowCV(true), 900);
+  };
+
+  const handleCVClose = () => {
+    setShowCV(false);
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+  };
+
   // --- star click
   const handleStarClick = (star: Star) => {
     const event = events.find((e) => e.id === Number(star.id));
@@ -163,7 +238,7 @@ export default function StarryNight() {
       setOffset(newOffset);
       setScale(zoomTargetScale);
 
-      setTimeout(() => setActiveEvent(event), 2000);
+      setTimeout(() => setActiveEvent(event), 900);
     }
   };
 
@@ -175,13 +250,25 @@ export default function StarryNight() {
 
   // --- close on ESC
   useEffect(() => {
-    if (!activeEvent) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeEvent();
+      if (e.key === 'Escape') {
+        closeOverlay();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeEvent]);
+  }, [activeEvent, showCV]);
+
+  const closeOverlay = () => {
+    if (activeEvent) {
+      setActiveEvent(null);
+    }
+    if (showCV) {
+      setShowCV(false);
+    }
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+  };
 
   const handleSaveEvent = async (data: {
     id?: number;
@@ -284,6 +371,9 @@ export default function StarryNight() {
     setShowLogoutPrompt(false);
   };
 
+  const baseSize = 8;
+  const scaledSize = baseSize * (viewport.width / referenceWidth);
+
   return (
     <div
       ref={containerRef}
@@ -316,11 +406,11 @@ export default function StarryNight() {
         style={{ transformOrigin: 'top left' }}
         animate={{ scale, x: offset.x, y: offset.y }}
         transition={{
-          duration: isDragging ? 0 : 2.3,
+          duration: isDragging ? 0 : 1,
           ease: 'linear',
         }}
       >
-        <svg className="absolute w-full h-full top-0 left-0">
+        {/* <svg className="absolute w-full h-full top-0 left-0">
           {stars.map((star, index) => {
             if (index === stars.length - 1) return null;
             const nextStar = stars[index + 1];
@@ -339,7 +429,7 @@ export default function StarryNight() {
               />
             );
           })}
-        </svg>
+        </svg> */}
 
         {stars.map((star) => {
           const y = star.top + Math.sin(animationTick + Number(star.id)) * 2;
@@ -357,20 +447,95 @@ export default function StarryNight() {
             >
               {/* Title label */}
               {event && (
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-white text-xs font-medium opacity-80 pointer-events-none select-none">
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-medium pointer-events-none select-none"
+                  style={{
+                    top: '-1.8rem',
+                    fontSize: `${9 * Math.min(viewport.width / referenceWidth, viewport.height / 400)}px`,
+                  }}
+                >
                   {event.title}
                 </div>
               )}
 
               {/* Star */}
               <div
-                className="w-8 h-8 bg-white rounded-full cursor-pointer hover:scale-150 transition-transform"
+                className="bg-white rounded-full cursor-pointer hover:scale-150 transition-transform"
+                style={{
+                  width: `${scaledSize}px`,
+                  height: `${scaledSize}px`,
+                }}
                 onClick={() => handleStarClick(star)}
               />
             </div>
           );
         })}
+
+        {/* CV Star */}
+        <div
+          key={cvStar.id}
+          className="absolute"
+          style={{
+            top: `${cvStar.top}%`,
+            left: `${cvStar.left}%`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <motion.div
+            className="bg-blue-400 rounded-full cursor-pointer hover:scale-125 transition-transform"
+            style={{
+              width: `${scaledSize}px`,
+              height: `${scaledSize}px`,
+            }}
+            animate={{
+              scale: [1, 1.25, 1],
+              opacity: [0.8, 1, 0.8],
+            }}
+            transition={{
+              duration: 7,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+            onClick={() => handleCVClick(cvStar)}
+          />
+          <div
+            className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-medium opacity-80 select-none italic"
+            style={{
+              top: '-1.5rem',
+              fontSize: `${9 * Math.min(viewport.width / referenceWidth, viewport.height / 400)}px`,
+            }}
+          >
+            Curriculum Vitae
+          </div>
+        </div>
       </motion.div>
+
+      <AnimatePresence>
+        {showCV && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90"
+            onClick={() => handleCVClose()}
+          >
+            <div
+              className="bg-white text-black p-6 rounded max-w-4xl w-full h-[90vh] overflow-auto flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-2xl font-bold mb-4">{"CV if you're interested 😎"}</h2>
+              <div className="flex-1 flex items-center justify-center overflow-auto">
+                <iframe
+                  src="/cv.pdf#view=FitV"
+                  className="w-full h-full border-0"
+                  title="Curriculum Vitae"
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Logout Prompt */}
       <AnimatePresence>
