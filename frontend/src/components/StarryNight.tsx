@@ -110,17 +110,16 @@ export default function StarryNight() {
   }, []);
 
   // --- zoom and drag
-const handleWheel = (e: WheelEvent) => {
-  e.preventDefault();
+  const handleWheel = (e: WheelEvent) => {
+    e.preventDefault();
 
-const zoomIntensity = 0.002;
+    const zoomIntensity = 0.002;
 
-setScale((prev) => {
-  const next = prev * Math.exp(-e.deltaY * zoomIntensity);
-  return Math.min(Math.max(next, 0.5), 6);
-});
-
-};
+    setScale((prev) => {
+      const next = prev * Math.exp(-e.deltaY * zoomIntensity);
+      return Math.min(Math.max(next, 0.5), 6);
+    });
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -316,10 +315,10 @@ setScale((prev) => {
         className="absolute top-0 left-0 w-full h-full"
         style={{ transformOrigin: 'top left' }}
         animate={{ scale, x: offset.x, y: offset.y }}
-          transition={{
-            duration: isDragging ? 0 : 2.3,
-            ease: 'linear',
-  }}
+        transition={{
+          duration: isDragging ? 0 : 2.3,
+          ease: 'linear',
+        }}
       >
         <svg className="absolute w-full h-full top-0 left-0">
           {stars.map((star, index) => {
