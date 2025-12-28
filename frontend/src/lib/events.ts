@@ -1,13 +1,6 @@
 import { get, post, put, del } from '@/lib/api';
 import { endpoints } from '@/lib/endpoints';
-
-export interface Event {
-  id: number;
-  title: string;
-  description: string;
-  imageUrl: string | null;
-  videoUrl: string | null;
-}
+import { Event } from '@/data/event';
 
 // Fetch all events
 export const getEvents = async (): Promise<Event[]> => {

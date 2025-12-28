@@ -1,118 +1,74 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { addEvent, deleteEvent, getEvents, updateEvent } from '@/lib/events';
+import { uploadFileToS3 } from '@/lib/s3';
+import { FALLBACK_EVENTS } from '@/utils/fallback';
+import { Event } from '@/data/event';
+
+// Portfolio components
+import Camera from './Camera';
+import BackgroundStars from './BackgroundStars';
+import CVStar from './CVStar';
+import NebulaCluster from './NebulaCluster';
+import ProjectStar from './ProjectStar';
+import NavigationControls from './NavigationControls';
+import EventDisplay from './EventDisplay';
+import CVOverlay from './CVOverlay';
+
+// Admin components
 import LoginOverlay from './LoginOverlay';
 import ExpandableControls from './ButtonAnimation';
 import CreateEventOverlay from './CreateEventOverlay';
 import RemoveEventOverlay from './RemoveEventOverlay';
-import { uploadFileToS3 } from '@/lib/s3';
-import EventDisplay from './EventDisplay';
-import { FALLBACK_EVENTS } from '@/utils/fallback';
-import { Event } from '@/data/event';
 
-interface Star {
-  id: string;
-  top: number;
-  left: number;
-  info: string;
-}
-
-interface CVStar {
-  id: string;
-  top: number;
-  left: number;
-}
-
-interface CVStar {
-  id: string;
-  top: number;
-  left: number;
-}
+// Hooks and utilities
+import { usePortfolioState } from '@/hooks/usePortfolioState';
+import { generatePortfolioData } from '@/utils/portfolioData';
 
 export default function StarryNight() {
-  const [scale, setScale] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [animationTick, setAnimationTick] = useState(0);
-  const [activeEvent, setActiveEvent] = useState<Event | null>(null);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const dragStart = useRef({ x: 0, y: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const [events, setEvents] = useState<Event[]>([]);
-  const [showLogin, setShowLogin] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showCreateEventOverlay, setShowCreateEventOverlay] = useState(false);
-  const [showRemoveEventOverlay, setShowRemoveEventOverlay] = useState(false);
-  const [showLogoutPrompt, setShowLogoutPrompt] = useState(false);
-
-  const [fallbackMode, setFallbackMode] = useState(false);
-
-  const [viewport, setViewport] = useState(() => ({
-    width: 0,
-    height: 0,
-  }));
-
+  // Viewport tracking
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
   useEffect(() => {
-    const update = () =>
-      setViewport({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-
-    update(); // set initial value on mount
+    const update = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
+    update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const referenceWidth = 400;
+  // Portfolio state management
+  const { state, zoomToNebula, zoomToProject, zoomOut, resetToOverview } = usePortfolioState();
 
-  useEffect(() => {
-    const handleResize = () =>
-      setViewport({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Data
+  const [events, setEvents] = useState<Event[]>([]);
+  const [fallbackMode, setFallbackMode] = useState(false);
+  const portfolioData = useMemo(() => generatePortfolioData(events, viewport), [events, viewport]);
 
-  const [cvStar] = useState<CVStar>({
-    id: 'cv',
-    top: 50,
-    left: 50,
-  });
+  // Admin state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showCreateEventOverlay, setShowCreateEventOverlay] = useState(false);
+  const [showRemoveEventOverlay, setShowRemoveEventOverlay] = useState(false);
+  const [showLogoutPrompt, setShowLogoutPrompt] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+
+  // CV overlay state
   const [showCV, setShowCV] = useState(false);
 
+  // Animation offset for subtle star movement
+  const [animationTick, setAnimationTick] = useState(0);
   useEffect(() => {
-    const token = localStorage.getItem('jwt');
-    if (token) {
-      setIsLoggedIn(true);
-    }
+    const interval = setInterval(() => setAnimationTick((t) => t + 0.01), 16);
+    return () => clearInterval(interval);
   }, []);
 
-  // --- handle login/logout toggle on "P"
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'p') {
-        if (fallbackMode) return;
-
-        if (isLoggedIn) {
-          setShowLogoutPrompt((prev) => !prev);
-        } else {
-          setShowLogin(true);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isLoggedIn]);
-
-  // --- fetch events
+  // Fetch events
   useEffect(() => {
     const fetchEvents = async () => {
-      // TOOD: uncomment when BE is up
       setEvents(FALLBACK_EVENTS);
       setFallbackMode(true);
+      // TODO: Uncomment when backend is available
       // try {
       //   const data = await getEvents();
       //   setEvents(data);
@@ -126,218 +82,84 @@ export default function StarryNight() {
     fetchEvents();
   }, []);
 
-  const [stars, setStars] = useState<Star[]>([]);
-
-  // --- generate stars from events
+  // Check login status
   useEffect(() => {
-    if (events.length === 0) return;
-
-    const radiusPercent = 40;
-    const centerX = cvStar.left;
-    const centerY = cvStar.top;
-
-    // Sort events by ID to ensure consistent ordering
-    const sortedEvents = [...events].sort((a, b) => a.id - b.id);
-
-    const newStars: Star[] = sortedEvents.map((event, i) => {
-      // Start at -90 degrees (12 o'clock) and go clockwise
-      // Subtract PI/2 to start at top, use positive angle for clockwise
-      const angle = -Math.PI / 2 + (2 * Math.PI * i) / sortedEvents.length;
-      const left = centerX + radiusPercent * Math.cos(angle);
-      const top = centerY + radiusPercent * Math.sin(angle);
-
-      return {
-        id: event.id.toString(),
-        left,
-        top,
-        info: `${event.title} - ${event.description.slice(0, 50)}${
-          event.description.length > 50 ? '...' : ''
-        }`,
-      };
-    });
-    const radiusPercent = 40;
-    const centerX = cvStar.left;
-    const centerY = cvStar.top;
-
-    // Sort events by ID to ensure consistent ordering
-    const sortedEvents = [...events].sort((a, b) => a.id - b.id);
-
-    const newStars: Star[] = sortedEvents.map((event, i) => {
-      // Start at -90 degrees (12 o'clock) and go clockwise
-      // Subtract PI/2 to start at top, use positive angle for clockwise
-      const angle = -Math.PI / 2 + (2 * Math.PI * i) / sortedEvents.length;
-      const left = centerX + radiusPercent * Math.cos(angle);
-      const top = centerY + radiusPercent * Math.sin(angle);
-
-      return {
-        id: event.id.toString(),
-        left,
-        top,
-        info: `${event.title} - ${event.description.slice(0, 50)}${
-          event.description.length > 50 ? '...' : ''
-        }`,
-      };
-    });
-
-    setStars(newStars);
-  }, [events]);
-
-  // --- animation tick
-  useEffect(() => {
-    const interval = setInterval(() => setAnimationTick((t) => t + 0.01), 16);
-    return () => clearInterval(interval);
-  }, []);
-
-  // --- zoom and drag
-  const handleWheel = (e: WheelEvent) => {
-    e.preventDefault();
-
-    const zoomIntensity = 0.002;
-
-    setScale((prev) => {
-      const next = prev * Math.exp(-e.deltaY * zoomIntensity);
-      return Math.min(Math.max(next, 0.5), 6);
-    });
-  };
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
-  }, []);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    dragStart.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
-  };
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setOffset({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
-  };
-  const handleMouseUp = () => setIsDragging(false);
-
-  const handleCVClick = (cvStar: CVStar) => {
-    // Zoom and show read-only event
-    const zoomTargetScale = 4;
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-    const starX = (cvStar.left / 100) * window.innerWidth;
-    const starY = (cvStar.top / 100) * window.innerHeight;
-
-    const newOffset = {
-      x: centerX - starX * zoomTargetScale,
-      y: centerY - starY * zoomTargetScale,
-    };
-    setIsDragging(false);
-    setOffset(newOffset);
-    setScale(zoomTargetScale);
-
-    setTimeout(() => setShowCV(true), 900);
-  };
-
-  const handleCVClose = () => {
-    setShowCV(false);
-    setScale(1);
-    setOffset({ x: 0, y: 0 });
-  };
-
-  const handleCVClick = (cvStar: CVStar) => {
-    // Zoom and show read-only event
-    const zoomTargetScale = 4;
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-    const starX = (cvStar.left / 100) * window.innerWidth;
-    const starY = (cvStar.top / 100) * window.innerHeight;
-
-    const newOffset = {
-      x: centerX - starX * zoomTargetScale,
-      y: centerY - starY * zoomTargetScale,
-    };
-    setIsDragging(false);
-    setOffset(newOffset);
-    setScale(zoomTargetScale);
-
-    setTimeout(() => setShowCV(true), 900);
-  };
-
-  const handleCVClose = () => {
-    setShowCV(false);
-    setScale(1);
-    setOffset({ x: 0, y: 0 });
-  };
-
-  // --- star click
-  const handleStarClick = (star: Star) => {
-    const event = events.find((e) => e.id === Number(star.id));
-    if (!event) return;
-
-    if (isLoggedIn) {
-      // Open editable overlay
-      setEditingEvent(event);
-      setShowCreateEventOverlay(true);
-    } else {
-      // Zoom and show read-only event
-      const zoomTargetScale = 4;
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
-      const starX = (star.left / 100) * window.innerWidth;
-      const starY = (star.top / 100) * window.innerHeight;
-
-      const newOffset = {
-        x: centerX - starX * zoomTargetScale,
-        y: centerY - starY * zoomTargetScale,
-      };
-      setIsDragging(false);
-      setOffset(newOffset);
-      setScale(zoomTargetScale);
-
-      setTimeout(() => setActiveEvent(event), 900);
-      setTimeout(() => setActiveEvent(event), 900);
+    const token = localStorage.getItem('jwt');
+    if (token) {
+      setIsLoggedIn(true);
     }
-  };
+  }, []);
 
-  const closeEvent = () => {
-    setActiveEvent(null);
-    setScale(1);
-    setOffset({ x: 0, y: 0 });
-  };
-
-  // --- close on ESC
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        closeOverlay();
+        if (showCV) {
+          setShowCV(false);
+          resetToOverview();
+        } else if (state.viewState !== 'OVERVIEW') {
+          zoomOut();
+        } else if (showCreateEventOverlay || showRemoveEventOverlay || showLogin) {
+          setShowCreateEventOverlay(false);
+          setShowRemoveEventOverlay(false);
+          setShowLogin(false);
+        }
+      } else if (e.key.toLowerCase() === 'p' && !fallbackMode) {
+        if (isLoggedIn) {
+          setShowLogoutPrompt((prev) => !prev);
+        } else {
+          setShowLogin(true);
+        }
       }
       if (e.key === 'Escape') {
-        closeOverlay();
+        if (showCV) {
+          setShowCV(false);
+          resetToOverview();
+        } else if (state.viewState !== 'OVERVIEW') {
+          zoomOut();
+        } else if (showCreateEventOverlay || showRemoveEventOverlay || showLogin) {
+          setShowCreateEventOverlay(false);
+          setShowRemoveEventOverlay(false);
+          setShowLogin(false);
+        }
+      } else if (e.key.toLowerCase() === 'p' && !fallbackMode) {
+        if (isLoggedIn) {
+          setShowLogoutPrompt((prev) => !prev);
+        } else {
+          setShowLogin(true);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeEvent, showCV]);
+  }, [
+    state.viewState,
+    showCV,
+    showCreateEventOverlay,
+    showRemoveEventOverlay,
+    showLogin,
+    isLoggedIn,
+    fallbackMode,
+    zoomOut,
+    resetToOverview,
+  ]);
 
-  const closeOverlay = () => {
-    if (activeEvent) {
-      setActiveEvent(null);
-    }
-    if (showCV) {
-      setShowCV(false);
-    }
-    setScale(1);
-    setOffset({ x: 0, y: 0 });
+  // Event handlers
+  const handleCVClick = () => {
+    setShowCV(true);
   };
-  }, [activeEvent, showCV]);
 
-  const closeOverlay = () => {
-    if (activeEvent) {
-      setActiveEvent(null);
+  const handleNebulaClick = (nebula: (typeof portfolioData.nebulae)[0]) => {
+    zoomToNebula(nebula, viewport);
+  };
+
+  const handleProjectClick = (project: Event) => {
+    if (isLoggedIn) {
+      setEditingEvent(project);
+      setShowCreateEventOverlay(true);
+    } else {
+      zoomToProject(project, viewport);
     }
-    if (showCV) {
-      setShowCV(false);
-    }
-    setScale(1);
-    setOffset({ x: 0, y: 0 });
   };
 
   const handleSaveEvent = async (data: {
@@ -354,10 +176,8 @@ export default function StarryNight() {
       let videoUrl: string | null = null;
 
       if (data.id) {
-        // Editing existing event
         const existingEvent = events.find((e) => e.id === data.id)!;
 
-        // Determine image/video URLs
         if (data.imageRemoved) {
           imageUrl = null;
         } else if (data.imageFile) {
@@ -374,7 +194,6 @@ export default function StarryNight() {
           videoUrl = existingEvent.videoUrl;
         }
 
-        // Update backend
         await updateEvent(data.id, {
           title: data.title,
           description: data.description,
@@ -382,7 +201,6 @@ export default function StarryNight() {
           videoUrl,
         });
 
-        // Update frontend state
         setEvents((prev) =>
           prev.map((e) =>
             e.id === data.id
@@ -391,7 +209,6 @@ export default function StarryNight() {
           ),
         );
       } else {
-        // New event
         const newEvent = await addEvent({
           title: data.title,
           description: data.description,
@@ -426,265 +243,100 @@ export default function StarryNight() {
     }
   };
 
-  const [backgroundStars] = useState(() =>
-    [...Array(150)].map(() => ({
-      top: Math.random() * 100,
-      left: Math.random() * 100,
-      size: Math.random() * 2 + 1,
-      opacity: Math.random() * 0.8 + 0.2,
-    })),
-  );
-
   const handleLogout = () => {
     localStorage.removeItem('jwt');
     setIsLoggedIn(false);
     setShowLogoutPrompt(false);
   };
 
-  const baseSize = 8;
-  const scaledSize = baseSize * (viewport.width / referenceWidth);
+  const closeProjectDetail = () => {
+    zoomOut();
+  };
 
-  const baseSize = 8;
-  const scaledSize = baseSize * (viewport.width / referenceWidth);
+  // Determine which projects to show
+  const visibleProjects = useMemo(() => {
+    if (state.viewState === 'NEBULA' && state.activeNebula) {
+      return state.activeNebula.projects;
+    }
+    return [];
+  }, [state.viewState, state.activeNebula]);
+
+  // Determine which nebulae to show
+  const visibleNebulae = useMemo(() => {
+    if (state.viewState === 'OVERVIEW') {
+      return portfolioData.nebulae;
+    }
+    return [];
+  }, [state.viewState, portfolioData.nebulae]);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full h-screen bg-black overflow-hidden cursor-grab"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
-      {/* Background stars */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        {backgroundStars.map((star, i) => (
-          <div
-            key={i}
-            className="absolute bg-white rounded-full"
-            style={{
-              width: star.size,
-              height: star.size,
-              top: `${star.top}%`,
-              left: `${star.left}%`,
-              opacity: star.opacity,
-            }}
+    <div className="relative w-full h-screen bg-black overflow-hidden">
+      <BackgroundStars />
+
+      {/* CV Star - only visible in overview */}
+      {state.viewState === 'OVERVIEW' && (
+        <div className="fixed inset-0 pointer-events-none z-20">
+          <CVStar cv={portfolioData.cv} viewport={viewport} onClick={handleCVClick} />
+        </div>
+      )}
+
+      <Camera camera={state.camera}>
+        {/* Nebulae - only in overview */}
+        {visibleNebulae.map((nebula) => (
+          <NebulaCluster
+            key={nebula.clusterId}
+            nebula={nebula}
+            viewport={viewport}
+            onClick={() => handleNebulaClick(nebula)}
+            isActive={state.activeNebula?.clusterId === nebula.clusterId}
           />
         ))}
-      </div>
+      </Camera>
 
-      {/* Moving stars + lines */}
-      <motion.div
-        className="absolute top-0 left-0 w-full h-full"
-        style={{ transformOrigin: 'top left' }}
-        animate={{ scale, x: offset.x, y: offset.y }}
-        transition={{
-          duration: isDragging ? 0 : 1,
-          duration: isDragging ? 0 : 1,
-          ease: 'linear',
-        }}
-      >
-        {/* <svg className="absolute w-full h-full top-0 left-0">
-        {/* <svg className="absolute w-full h-full top-0 left-0">
-          {stars.map((star, index) => {
-            if (index === stars.length - 1) return null;
-            const nextStar = stars[index + 1];
-            const y1 = star.top + Math.sin(animationTick + Number(star.id)) * 2;
-            const y2 = nextStar.top + Math.sin(animationTick + Number(nextStar.id)) * 2;
-            return (
-              <line
-                key={star.id}
-                x1={`${star.left}%`}
-                y1={`${y1}%`}
-                x2={`${nextStar.left}%`}
-                y2={`${y2}%`}
-                stroke="white"
-                strokeWidth={1.5}
-                opacity={0.7}
-              />
-            );
-          })}
-        </svg> */}
-        </svg> */}
-
-        {stars.map((star) => {
-          const y = star.top + Math.sin(animationTick + Number(star.id)) * 2;
-          const event = events.find((e) => e.id === Number(star.id));
-
-          return (
-            <div
-              key={star.id}
-              className="absolute"
-              style={{
-                top: `${y}%`,
-                left: `${star.left}%`,
-                transform: 'translate(-50%, -50%)',
-              }}
-            >
-              {/* Title label */}
-              {event && (
-                <div
-                  className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-medium pointer-events-none select-none"
-                  style={{
-                    top: '-1.8rem',
-                    fontSize: `${9 * Math.min(viewport.width / referenceWidth, viewport.height / 400)}px`,
-                  }}
-                >
-                <div
-                  className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-medium pointer-events-none select-none"
-                  style={{
-                    top: '-1.8rem',
-                    fontSize: `${9 * Math.min(viewport.width / referenceWidth, viewport.height / 400)}px`,
-                  }}
-                >
-                  {event.title}
-                </div>
-              )}
-
-              {/* Star */}
-              <div
-                className="bg-white rounded-full cursor-pointer hover:scale-150 transition-transform"
-                style={{
-                  width: `${scaledSize}px`,
-                  height: `${scaledSize}px`,
-                }}
-                className="bg-white rounded-full cursor-pointer hover:scale-150 transition-transform"
-                style={{
-                  width: `${scaledSize}px`,
-                  height: `${scaledSize}px`,
-                }}
-                onClick={() => handleStarClick(star)}
-              />
-            </div>
-          );
-        })}
-
-        {/* CV Star */}
-        <div
-          key={cvStar.id}
-          className="absolute"
-          style={{
-            top: `${cvStar.top}%`,
-            left: `${cvStar.left}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          <motion.div
-            className="bg-blue-400 rounded-full cursor-pointer hover:scale-125 transition-transform"
-            style={{
-              width: `${scaledSize}px`,
-              height: `${scaledSize}px`,
-            }}
-            animate={{
-              scale: [1, 1.25, 1],
-              opacity: [0.8, 1, 0.8],
-            }}
-            transition={{
-              duration: 7,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-            onClick={() => handleCVClick(cvStar)}
+      {/* Project Stars - render outside Camera when in nebula view with zoom animation */}
+      {state.viewState === 'NEBULA' &&
+        visibleProjects.map((project) => (
+          <ProjectStar
+            key={project.id}
+            project={project}
+            viewport={viewport}
+            onClick={() => handleProjectClick(project.event)}
+            animationOffset={animationTick + Number(project.id)}
+            cameraScale={state.camera.scale}
           />
-          <div
-            className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-medium opacity-80 select-none italic"
-            style={{
-              top: '-1.5rem',
-              fontSize: `${9 * Math.min(viewport.width / referenceWidth, viewport.height / 400)}px`,
-            }}
-          >
-            Curriculum Vitae
-          </div>
-        </div>
+        ))}
 
-        {/* CV Star */}
-        <div
-          key={cvStar.id}
-          className="absolute"
-          style={{
-            top: `${cvStar.top}%`,
-            left: `${cvStar.left}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          <motion.div
-            className="bg-blue-400 rounded-full cursor-pointer hover:scale-125 transition-transform"
-            style={{
-              width: `${scaledSize}px`,
-              height: `${scaledSize}px`,
-            }}
-            animate={{
-              scale: [1, 1.25, 1],
-              opacity: [0.8, 1, 0.8],
-            }}
-            transition={{
-              duration: 7,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-            onClick={() => handleCVClick(cvStar)}
-          />
-          <div
-            className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-medium opacity-80 select-none italic"
-            style={{
-              top: '-1.5rem',
-              fontSize: `${9 * Math.min(viewport.width / referenceWidth, viewport.height / 400)}px`,
-            }}
-          >
-            Curriculum Vitae
-          </div>
-        </div>
-      </motion.div>
+      {/* Navigation Controls */}
+      <NavigationControls viewState={state.viewState} onBack={zoomOut} />
 
+      {/* Project Detail Overlay */}
       <AnimatePresence>
-        {showCV && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90"
-            onClick={() => handleCVClose()}
-          >
-            <div
-              className="bg-white text-black p-6 rounded max-w-4xl w-full h-[90vh] overflow-auto flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 className="text-2xl font-bold mb-4">{"CV if you're interested 😎"}</h2>
-              <div className="flex-1 flex items-center justify-center overflow-auto">
-                <iframe
-                  src="/cv.pdf#view=FitV"
-                  className="w-full h-full border-0"
-                  title="Curriculum Vitae"
-                />
-              </div>
-            </div>
-          </motion.div>
+        {state.viewState === 'DETAIL' && state.activeProject && (
+          <EventDisplay event={state.activeProject} onClose={closeProjectDetail} />
         )}
       </AnimatePresence>
 
-      {/* Logout Prompt */}
+      {/* CV Overlay */}
+      <CVOverlay
+        isOpen={showCV}
+        onClose={() => {
+          setShowCV(false);
+          resetToOverview();
+        }}
+      />
+
+      {/* Admin UI */}
       <AnimatePresence>
         {showLogoutPrompt && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="absolute top-6 right-6 bg-white text-black px-4 py-2 rounded cursor-pointer z-50 shadow-md hover:bg-gray-200 transition"
+          <div
+            className="fixed top-6 right-6 bg-white text-black px-4 py-2 rounded cursor-pointer z-50 shadow-md hover:bg-gray-200 transition"
             onClick={handleLogout}
           >
             Log out
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
-      {/* Read-only Active Event Overlay */}
-      <AnimatePresence>
-        {activeEvent && <EventDisplay event={activeEvent} onClose={closeEvent} />}
-      </AnimatePresence>
-
-      {/* Login */}
       <AnimatePresence>
         {showLogin && !fallbackMode && (
           <LoginOverlay
@@ -697,7 +349,6 @@ export default function StarryNight() {
         )}
       </AnimatePresence>
 
-      {/* Create / Edit Event Overlay */}
       {showCreateEventOverlay && (
         <CreateEventOverlay
           initialEvent={editingEvent || undefined}
@@ -713,7 +364,6 @@ export default function StarryNight() {
         />
       )}
 
-      {/* Remove Event */}
       {showRemoveEventOverlay && (
         <RemoveEventOverlay
           events={events}
@@ -722,15 +372,14 @@ export default function StarryNight() {
         />
       )}
 
-      {/* Controls */}
       {isLoggedIn &&
         !showLogin &&
         !showCreateEventOverlay &&
         !showRemoveEventOverlay &&
-        !activeEvent && (
+        state.viewState === 'OVERVIEW' && (
           <ExpandableControls
             onCreateClick={() => {
-              setEditingEvent(null); // new event
+              setEditingEvent(null);
               setShowCreateEventOverlay(true);
             }}
             onRemoveClick={() => setShowRemoveEventOverlay(true)}
