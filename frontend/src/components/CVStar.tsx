@@ -13,15 +13,21 @@ interface CVStarProps {
 
 export default function CVStar({ cv, viewport, onClick }: CVStarProps) {
   const baseSize = PORTFOLIO_CONFIG.VISUAL.CV_STAR_SIZE;
-// Responsive scaling for nebula
-const MIN_SIZE = 10; // minimum size in px
-const MAX_SIZE = 40; // maximum size in px
+  // Responsive scaling for nebula
+  const MIN_SIZE = 10; // minimum size in px
+  const MAX_SIZE = 40; // maximum size in px
 
-// scale proportionally to width but also consider height
-const scaleFactor = Math.min(viewport.width / PORTFOLIO_CONFIG.REFERENCE_WIDTH, viewport.height / PORTFOLIO_CONFIG.REFERENCE_HEIGHT);
+  // scale proportionally to width but also consider height
+  const scaleFactor = Math.min(
+    viewport.width / PORTFOLIO_CONFIG.REFERENCE_WIDTH,
+    viewport.height / PORTFOLIO_CONFIG.REFERENCE_HEIGHT,
+  );
 
-// apply base size and clamp
-const scaledSize = Math.max(MIN_SIZE, Math.min(MAX_SIZE, baseSize * scaleFactor * PORTFOLIO_CONFIG.VISUAL.NEBULA_SIZE_MULTIPLIER));
+  // apply base size and clamp
+  const scaledSize = Math.max(
+    MIN_SIZE,
+    Math.min(MAX_SIZE, baseSize * scaleFactor * PORTFOLIO_CONFIG.VISUAL.NEBULA_SIZE_MULTIPLIER),
+  );
 
   const fontSize =
     9 * Math.min(viewport.width / PORTFOLIO_CONFIG.REFERENCE_WIDTH, viewport.height / 400);
