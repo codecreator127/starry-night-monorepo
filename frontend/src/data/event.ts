@@ -6,4 +6,5 @@ export interface Event {
   videoUrl: string | null;
   githubUrl?: string | null;
   liveUrl?: string | null;
+  clusterId: number;
 }

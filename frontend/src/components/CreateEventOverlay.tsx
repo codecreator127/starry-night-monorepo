@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Event } from '@/lib/events';
+import { Event } from '@/data/event';
 
 interface CreateEventOverlayProps {
   onClose: () => void;
