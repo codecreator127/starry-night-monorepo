@@ -30,3 +30,7 @@ Check this out in the free-tier branch.
 3. Vercel FE deployment only
 
 Completely FE with mocked data. This is for in the scenario when BE is unavailable, i.e. Oracle or AWS goes down, then show default events and disable login.
+
+
+# Planning, Schemas and Architecture Diagram
+https://www.notion.so/Full-Application-Stack-Runthrough-285f43d171ee80d08411e5566ba2ed61?source=copy_link
