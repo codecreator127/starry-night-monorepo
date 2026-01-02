@@ -253,8 +253,7 @@ export default function NebulaCluster({ nebula, viewport, onClick, isActive }: N
         height: `${scaledSize}px`,
         top: `${nebula.position.top}%`,
         left: `${nebula.position.left}%`,
-        transform: 'translate(-69%, -66%)',
-        zIndex: isActive ? 10 : 1,
+        transform: 'translate(-50%, -50%)',
       }}
       onClick={onClick}
       aria-label={`View ${nebula.name}`}

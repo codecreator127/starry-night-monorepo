@@ -56,6 +56,19 @@ export default function StarryNight() {
   // CV overlay state
   const [showCV, setShowCV] = useState(false);
 
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalHeight = document.body.style.height;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.height = '100vh';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.height = originalHeight;
+    };
+  }, []);
+
   // Animation offset for subtle star movement
   const [animationTick, setAnimationTick] = useState(0);
   useEffect(() => {

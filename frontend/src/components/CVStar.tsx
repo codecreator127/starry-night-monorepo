@@ -30,7 +30,7 @@ export default function CVStar({ cv, viewport, onClick }: CVStarProps) {
   );
 
   const fontSize =
-    9 * Math.min(viewport.width / PORTFOLIO_CONFIG.REFERENCE_WIDTH, viewport.height / 400);
+    12 * Math.min(viewport.width / PORTFOLIO_CONFIG.REFERENCE_WIDTH, viewport.height / 400);
 
   return (
     <div
