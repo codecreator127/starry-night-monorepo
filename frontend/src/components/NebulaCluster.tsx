@@ -35,26 +35,13 @@ function seededRandom(seed: number) {
 }
 
 function getNebulaPalette(name: string) {
-  const n = name.toLowerCase();
-  if (n.includes('red')) {
-    return {
-      core: new THREE.Color('#ffd2a6'),
-      primary: new THREE.Color('#ff5a3a'),
-      secondary: new THREE.Color('#ffb347'),
-    };
-  }
-  if (n.includes('green')) {
-    return {
-      core: new THREE.Color('#d9fff2'),
-      primary: new THREE.Color('#32e6b0'),
-      secondary: new THREE.Color('#4cc9a6'),
-    };
-  }
-  // default: purple
   return {
-    core: new THREE.Color('#f5e4ff'),
-    primary: new THREE.Color('#b96bff'),
-    secondary: new THREE.Color('#ff77e9'),
+    // Shifted toward purple / magenta
+    ha: new THREE.Color('#c77dff'), // Magenta H-alpha
+    oiii: new THREE.Color('#5a7dff'), // Blue-violet oxygen
+    sii: new THREE.Color('#ffb703'), // Very limited sulfur accent
+    core: new THREE.Color('#f2ecff'), // Cool white
+    void: new THREE.Color('#0b0f1a'), // Deep space dust
   };
 }
 
@@ -87,6 +74,10 @@ export default function NebulaCluster({ nebula, viewport, onClick, isActive }: N
       antialias: true,
     });
 
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.35;
+
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(scaledSize, scaledSize, false);
 
@@ -110,13 +101,29 @@ export default function NebulaCluster({ nebula, viewport, onClick, isActive }: N
       const armAngle = (armIndex / ARM_COUNT) * Math.PI * 2;
       const theta = armAngle + r * ARM_TIGHTNESS + (rand() - 0.5) * ARM_WIDTH;
 
-      armPositions[i3] = Math.cos(theta) * r * ellipseX;
-      armPositions[i3 + 1] = Math.sin(theta) * r * ellipseY;
-      armPositions[i3 + 2] = 0;
+      const noise = Math.sin(theta * 6 + r * 2.5) * 0.15 + Math.cos(theta * 3 - r * 1.8) * 0.12;
+
+      const distortedR = r + noise;
+
+      armPositions[i3] = Math.cos(theta) * distortedR * ellipseX;
+      armPositions[i3 + 1] = Math.sin(theta) * distortedR * ellipseY;
 
       const mix = rand();
-      const color = palette.primary.clone().lerp(palette.secondary, mix);
-      const fade = Math.exp(-r * 0.25);
+      const emissionMix = rand();
+      const color = new THREE.Color();
+
+      if (emissionMix < 0.55) {
+        color.copy(palette.oiii);
+      } else if (emissionMix < 0.9) {
+        color.copy(palette.ha);
+      } else {
+        color.copy(palette.sii); // rare accent only
+      }
+
+      // Ionization gradient (hot center → cooler outer filaments)
+      color.lerp(palette.core, Math.exp(-r * 0.6));
+
+      const fade = Math.exp(-r * 0.18);
 
       armColors[i3] = color.r * fade;
       armColors[i3 + 1] = color.g * fade;
@@ -133,7 +140,7 @@ export default function NebulaCluster({ nebula, viewport, onClick, isActive }: N
       transparent: true,
       opacity: 1,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
 
     const spiralArms = new THREE.Points(armGeometry, armMaterial);
@@ -184,13 +191,25 @@ export default function NebulaCluster({ nebula, viewport, onClick, isActive }: N
       const r = Math.pow(rand(), 1.1) * 11;
       const t = rand() * Math.PI * 2;
 
-      const color = palette.primary.clone().lerp(palette.secondary, rand());
+      const emissionMix = rand();
+      const color = new THREE.Color();
+
+      if (emissionMix < 0.6) {
+        color.copy(palette.oiii);
+      } else {
+        color.copy(palette.ha);
+      }
+
+      color.multiplyScalar(0.35);
 
       bgPositions[i3] = Math.cos(t) * r * ellipseX;
       bgPositions[i3 + 1] = Math.sin(t) * r * ellipseY;
       bgPositions[i3 + 2] = 0;
 
-      const fade = Math.exp(-r * 0.18);
+      const fade = Math.exp(-r * 0.32);
+
+      color.multiplyScalar(1.25);
+
       bgColors[i3] = color.r * 0.4 * fade;
       bgColors[i3 + 1] = color.g * 0.4 * fade;
       bgColors[i3 + 2] = color.b * 0.4 * fade;
@@ -211,6 +230,40 @@ export default function NebulaCluster({ nebula, viewport, onClick, isActive }: N
 
     const background = new THREE.Points(bgGeometry, bgMaterial);
     scene.add(background);
+
+    const dustCount = 2500;
+    const dustPositions = new Float32Array(dustCount * 3);
+    const dustColors = new Float32Array(dustCount * 3);
+
+    for (let i = 0; i < dustCount; i++) {
+      const i3 = i * 3;
+      const r = Math.pow(rand(), 1.3) * 9.5;
+      const t = rand() * Math.PI * 2;
+
+      dustPositions[i3] = Math.cos(t) * r * ellipseX;
+      dustPositions[i3 + 1] = Math.sin(t) * r * ellipseY;
+      dustPositions[i3 + 2] = 0;
+
+      const fade = Math.exp(-r * 0.12);
+      dustColors[i3] = palette.void.r * fade;
+      dustColors[i3 + 1] = palette.void.g * fade;
+      dustColors[i3 + 2] = palette.void.b * fade;
+    }
+
+    const dustGeometry = new THREE.BufferGeometry();
+    dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+    dustGeometry.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
+
+    const dustMaterial = new THREE.PointsMaterial({
+      size: 0.9,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.18,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+
+    scene.add(new THREE.Points(dustGeometry, dustMaterial));
 
     /* ===================== ANIMATION ===================== */
     const armSpeed = 0.0015 + rand() * 0.0015;

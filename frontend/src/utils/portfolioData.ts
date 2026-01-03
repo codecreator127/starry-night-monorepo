@@ -55,8 +55,8 @@ export function generatePortfolioData(
 
   // CV is always centered at 50%, 50%
   // Add a small leftward offset to center the triangle visually
-  const centerX = 50 - 2.5; // Shift triangle slightly to the left
-  const centerY = 50 - 2.5;
+  const centerX = 50;
+  const centerY = 50;
 
   // Group events by clusterId
   const clusters = new Map<number, Event[]>();
@@ -68,13 +68,12 @@ export function generatePortfolioData(
   });
 
   const sortedClusterIds = [...clusters.keys()].sort((a, b) => a - b);
-  const clamp = (v: number) => Math.min(95, Math.max(5, v));
-
-  // Calculate equilateral triangle positions
-  // Use the smaller viewport dimension to ensure triangle fits and remains equilateral
-  const minDimension = Math.min(viewport.width, viewport.height);
-  // Radius in pixels - using percentage of smaller dimension
-  const radiusPixels = (PORTFOLIO_CONFIG.LAYOUT.NEBULA_RADIUS / 100) * minDimension;
+  // Calculate equilateral triangle positions centered on screen
+  // Work in absolute pixels to ensure true equilateral triangle
+  const centerXpx = viewport.width * 0.5;
+  const centerYpx = viewport.height * 0.5;
+  const minDim = Math.min(viewport.width, viewport.height);
+  const radiusPx = minDim * (PORTFOLIO_CONFIG.LAYOUT.NEBULA_RADIUS / 100);
 
   // Equilateral triangle vertices: top, bottom-right, bottom-left
   // Angles: -90° (top), 30° (bottom-right), 150° (bottom-left)
@@ -89,19 +88,15 @@ export function generatePortfolioData(
     const clusterConfig =
       PORTFOLIO_CONFIG.CLUSTERS[clusterId as keyof typeof PORTFOLIO_CONFIG.CLUSTERS];
 
-    // Get angle for this cluster (ensuring we have exactly 3 clusters for equilateral triangle)
     const angle = triangleAngles[clusterIndex % triangleAngles.length];
 
-    // Calculate position in pixels relative to center
-    const dxPixels = radiusPixels * Math.cos(angle);
-    const dyPixels = radiusPixels * Math.sin(angle);
+    // Calculate absolute pixel positions for true equilateral triangle
+    const xPx = centerXpx + radiusPx * Math.cos(angle);
+    const yPx = centerYpx + radiusPx * Math.sin(angle);
 
-    // Convert to percentages based on viewport dimensions
-    const dxPercent = (dxPixels / viewport.width) * 100;
-    const dyPercent = (dyPixels / viewport.height) * 100;
-
-    const clusterCenterX = clamp(centerX + dxPercent);
-    const clusterCenterY = clamp(centerY + dyPercent);
+    // Convert to percentages for CSS positioning
+    const clusterCenterX = (xPx / viewport.width) * 100;
+    const clusterCenterY = (yPx / viewport.height) * 100;
 
     // Dynamic intra-cluster radius
     const intraClusterRadius = Math.max(
