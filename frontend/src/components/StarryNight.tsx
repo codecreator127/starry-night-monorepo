@@ -103,33 +103,63 @@ export default function StarryNight() {
     }
   }, []);
 
+  // History management
+  useEffect(() => {
+    // Set initial state
+    window.history.replaceState({ type: 'OVERVIEW' }, '', window.location.pathname);
+
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state;
+
+      if (!state || state.type === 'OVERVIEW') {
+        setShowCV(false);
+        resetToOverview();
+        return;
+      }
+
+      if (state.type === 'CV') {
+        setShowCV(true);
+        // Ensure we are in overview for the background
+        if (state.viewState !== 'OVERVIEW') {
+          resetToOverview();
+        }
+        return;
+      }
+
+      // For other states, ensure CV is closed
+      setShowCV(false);
+
+      if (state.type === 'NEBULA') {
+        const nebula = portfolioData.nebulae.find((n) => n.clusterId === state.id);
+        if (nebula) {
+          zoomToNebula(nebula, { width: window.innerWidth, height: window.innerHeight });
+        } else {
+          resetToOverview();
+        }
+      } else if (state.type === 'DETAIL') {
+        const project = events.find((e) => e.id === state.id);
+        if (project) {
+          zoomToProject(project, { width: window.innerWidth, height: window.innerHeight });
+        } else {
+          resetToOverview(); // Or fallback to nebula?
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [events, portfolioData, resetToOverview, zoomToNebula, zoomToProject]);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (showCV) {
-          setShowCV(false);
-          resetToOverview();
+          // CV is an overlay, use history back
+          window.history.back();
         } else if (state.viewState !== 'OVERVIEW') {
-          zoomOut();
-        } else if (showCreateEventOverlay || showRemoveEventOverlay || showLogin) {
-          setShowCreateEventOverlay(false);
-          setShowRemoveEventOverlay(false);
-          setShowLogin(false);
-        }
-      } else if (e.key.toLowerCase() === 'p' && !fallbackMode) {
-        if (isLoggedIn) {
-          setShowLogoutPrompt((prev) => !prev);
-        } else {
-          setShowLogin(true);
-        }
-      }
-      if (e.key === 'Escape') {
-        if (showCV) {
-          setShowCV(false);
-          resetToOverview();
-        } else if (state.viewState !== 'OVERVIEW') {
-          zoomOut();
+          // Use history back for main navigation
+          window.history.back();
         } else if (showCreateEventOverlay || showRemoveEventOverlay || showLogin) {
           setShowCreateEventOverlay(false);
           setShowRemoveEventOverlay(false);
@@ -153,16 +183,20 @@ export default function StarryNight() {
     showLogin,
     isLoggedIn,
     fallbackMode,
-    zoomOut,
-    resetToOverview,
   ]);
 
   // Event handlers
   const handleCVClick = () => {
+    window.history.pushState({ type: 'CV' }, '', '#cv');
     setShowCV(true);
   };
 
   const handleNebulaClick = (nebula: (typeof portfolioData.nebulae)[0]) => {
+    window.history.pushState(
+      { type: 'NEBULA', id: nebula.clusterId },
+      '',
+      `#nebula-${nebula.clusterId}`,
+    );
     zoomToNebula(nebula, viewport);
   };
 
@@ -171,6 +205,7 @@ export default function StarryNight() {
       setEditingEvent(project);
       setShowCreateEventOverlay(true);
     } else {
+      window.history.pushState({ type: 'DETAIL', id: project.id }, '', `#project-${project.id}`);
       zoomToProject(project, viewport);
     }
   };
@@ -263,7 +298,13 @@ export default function StarryNight() {
   };
 
   const closeProjectDetail = () => {
-    zoomOut();
+    // If we have history (which we should if we came here via click), go back
+    if (state.viewState === 'DETAIL') {
+      window.history.back();
+    } else {
+      // Fallback if somehow state is desynced
+      zoomOut();
+    }
   };
 
   // Determine which projects to show
@@ -320,7 +361,7 @@ export default function StarryNight() {
         ))}
 
       {/* Navigation Controls */}
-      <NavigationControls viewState={state.viewState} onBack={zoomOut} />
+      <NavigationControls viewState={state.viewState} onBack={() => window.history.back()} />
 
       {/* Project Detail Overlay */}
       <AnimatePresence>
@@ -333,8 +374,8 @@ export default function StarryNight() {
       <CVOverlay
         isOpen={showCV}
         onClose={() => {
-          setShowCV(false);
-          resetToOverview();
+          // Use history back to close
+          window.history.back();
         }}
       />
 
