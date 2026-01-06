@@ -20,7 +20,7 @@ interface ParsedContent {
  * Parses the description text into structured sections
  */
 function parseDescription(description: string): ParsedContent {
-  const techStackMatch = description.match(/[Tt]ech\s+[Ss]tack[:\s]+([^.]+)/);
+  const techStackMatch = description.match(/[Tt]ech\s+[Ss]tack:\s+([^.]+)/);
   const techStack = techStackMatch
     ? techStackMatch[1]
         .split(',')
@@ -28,7 +28,7 @@ function parseDescription(description: string): ParsedContent {
         .filter(Boolean)
     : [];
 
-  const cleanDescription = description.replace(/[Tt]ech\s+[Ss]tack[:\s]+[^.]+\.?/g, '').trim();
+  const cleanDescription = description.replace(/[Tt]ech\s+[Ss]tack:\s+[^.]+\.?/g, '').trim();
   const sentences = cleanDescription.match(/[^.!?]+[.!?]+/g) || [cleanDescription];
   const overview = sentences.slice(0, 2).join(' ').trim();
 

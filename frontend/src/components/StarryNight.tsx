@@ -16,6 +16,7 @@ import ProjectStar from './ProjectStar';
 import NavigationControls from './NavigationControls';
 import EventDisplay from './EventDisplay';
 import CVOverlay from './CVOverlay';
+import RocketCursor from 'rocket-cursor-component';
 
 // Admin components
 import LoginOverlay from './LoginOverlay';
@@ -30,12 +31,7 @@ import { generatePortfolioData } from '@/utils/portfolioData';
 export default function StarryNight() {
   // Viewport tracking
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
-  useEffect(() => {
-    const update = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
+  // Unified effect below handles viewport and cursor updates
 
   // Portfolio state management
   const { state, zoomToNebula, zoomToProject, zoomOut, resetToOverview } = usePortfolioState();
@@ -55,6 +51,38 @@ export default function StarryNight() {
 
   // CV overlay state
   const [showCV, setShowCV] = useState(false);
+
+  // Cursor state
+  const [cursorSize, setCursorSize] = useState(48);
+  const [enableCursor, setEnableCursor] = useState(false);
+
+  useEffect(() => {
+    const update = () => {
+      // Update viewport
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      setViewport({ width, height });
+
+      // Update cursor
+      const isTouch =
+        window.matchMedia('(pointer: coarse)').matches ||
+        window.matchMedia('(hover: none)').matches;
+
+      // Disable on mobile or small view
+      const shouldEnable = width >= 768 && !isTouch;
+
+      setEnableCursor(shouldEnable);
+
+      if (shouldEnable) {
+        const size = Math.min(72, Math.max(40, Math.round(width * 0.04)));
+        setCursorSize(size);
+      }
+    };
+
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -325,6 +353,15 @@ export default function StarryNight() {
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
+      {enableCursor && !showCV && (
+        <RocketCursor
+          size={cursorSize}
+          threshold={12}
+          flameHideTimeout={250}
+          hideCursor={true}
+          followSpeed={0.35}
+        />
+      )}
       <BackgroundStars />
 
       {/* CV Star - only visible in overview */}
