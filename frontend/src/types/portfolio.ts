@@ -11,6 +11,7 @@ export interface CVData {
   id: string;
   position: Position;
   title: string;
+  pdfUrl?: string;
 }
 
 export interface ProjectStar {

@@ -1,5 +1,8 @@
 // Portfolio configuration constants
 export const PORTFOLIO_CONFIG = {
+  CV: {
+    PDF_URL: '/cv.pdf',
+  },
   // Camera settings
   CAMERA: {
     OVERVIEW_SCALE: 1,

@@ -300,7 +300,7 @@ export default function NebulaCluster({ nebula, viewport, onClick, isActive }: N
 
   return (
     <button
-      className="absolute rounded-full cursor-pointer focus:outline-none sm:left-[50%] sm:top-[50%]"
+      className="absolute rounded-full cursor-pointer focus:outline-none"
       style={{
         width: `${scaledSize}px`,
         height: `${scaledSize}px`,

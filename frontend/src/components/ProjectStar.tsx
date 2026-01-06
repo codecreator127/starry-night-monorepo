@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ProjectStar as ProjectStarType } from '@/types/portfolio';
 import { PORTFOLIO_CONFIG } from '@/constants/portfolio';
+import StarVisual from './StarVisual';
 
 interface ProjectStarProps {
   project: ProjectStarType;
@@ -40,7 +41,7 @@ export default function ProjectStar({
 
   return (
     <motion.button
-      className="absolute flex flex-col items-center cursor-pointer bg-transparent border-none p-0 rounded"
+      className="absolute flex flex-col items-center justify-center cursor-pointer bg-transparent border-none p-0 rounded"
       style={{
         top: topStyle,
         left: leftStyle,
@@ -94,20 +95,18 @@ export default function ProjectStar({
       </div>
 
       <motion.div
-        className="bg-white rounded-full hover:scale-150 transition-transform pointer-events-none shadow-md shadow-white/30"
+        className="hover:scale-150 transition-transform duration-300"
         style={{
           width: `${starSize}px`,
           height: `${starSize}px`,
+          // Ensure the visual is centered within this container
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
-        animate={{
-          scale: [1, 1.2, 1],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-      />
+      >
+        <StarVisual size={starSize} />
+      </motion.div>
     </motion.button>
   );
 }

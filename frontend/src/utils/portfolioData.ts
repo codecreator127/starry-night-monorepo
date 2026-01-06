@@ -91,6 +91,8 @@ export function generatePortfolioData(
     const angle = triangleAngles[clusterIndex % triangleAngles.length];
 
     // Calculate absolute pixel positions for true equilateral triangle
+    // Using Centroid centering (mathematical center of mass) which aligns
+    // with the screen center (50%, 50%).
     const xPx = centerXpx + radiusPx * Math.cos(angle);
     const yPx = centerYpx + radiusPx * Math.sin(angle);
 
