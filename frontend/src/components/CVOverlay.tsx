@@ -26,21 +26,20 @@ export default function CVOverlay({ isOpen, onClose }: CVOverlayProps) {
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}
             transition={{ duration: 0.3 }}
-            className="bg-white text-black p-6 rounded-lg max-w-4xl w-full h-[90vh] overflow-auto flex flex-col relative"
+            className="bg-white text-black p-4 rounded-lg w-[95vw] h-[95vh] overflow-hidden flex flex-col relative shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-black hover:text-gray-600 transition focus:outline-none focus:ring-2 focus:ring-black rounded"
+              className="absolute top-4 right-4 z-10 bg-white/80 hover:bg-white text-black p-2 rounded-full shadow-md transition-all hover:scale-105 focus:outline-none"
               aria-label="Close CV"
             >
               <X size={24} />
             </button>
-            <h2 className="text-2xl font-bold mb-4">Curriculum Vitae</h2>
-            <div className="flex-1 flex items-center justify-center overflow-auto">
+            <div className="flex-1 w-full h-full relative">
               <iframe
-                src="/cv.pdf#view=FitV"
-                className="w-full h-full border-0"
+                src="/cv.pdf#view=FitH"
+                className="w-full h-full border-0 absolute inset-0"
                 title="Curriculum Vitae"
               />
             </div>
