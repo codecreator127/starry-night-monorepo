@@ -118,8 +118,17 @@ export const FALLBACK_EVENTS: Event[] = [
     id: 12,
     title: 'EROAD Project III',
     description:
-      'A senior-level project within EROAD’s Driver Safety team focused on delivering high-impact backend features. The role expanded into technical design and solution discovery. Key features: dashcam and SoS button feature delivery, large-scale event processing, technical solution discovery and system design. Tech stack: Java, Spring Boot, CloudFront, S3, SQS, Kinesis, GitHub Actions, Concourse',
-    imageUrl: '/drp.png',
+      'A new walkie talkie feature that involved processing audit logs, audio storage and handling, and idempotent handling of walkie talkie requests. Key features: Walkie Talkie intercom and with dashcams, . Tech stack: Java, Spring Boot, CloudFront, S3, SQS, Lambda, GitHub Actions, Concourse',
+    imageUrl: '/walkie-talkie.png',
+    videoUrl: null,
+    clusterId: 3,
+  },
+  {
+    id: 13,
+    title: 'EROAD Project IV',
+    description:
+      'A senior-level project within EROAD’s Driver Safety team focused on delivering high-impact backend features. The role expanded into technical design and solution discovery. Key features: dashcam and SoS button feature delivery, large-scale event processing, technical solution discovery and system design. Tech stack: Java, Spring Boot, SQS, Kinesis, Lambda, GitHub Actions, Concourse',
+    imageUrl: '/sos.png',
     videoUrl: null,
     clusterId: 3,
   },

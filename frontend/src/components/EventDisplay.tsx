@@ -166,7 +166,7 @@ export default function EventDisplay({ event, onClose }: EventDisplayProps) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="relative flex flex-col w-full max-w-4xl bg-black/70 backdrop-blur-sm rounded-xl overflow-hidden my-8"
+        className="relative flex flex-col w-full max-w-5xl bg-black/70 backdrop-blur-md rounded-2xl overflow-hidden my-8 border border-white/5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -175,15 +175,15 @@ export default function EventDisplay({ event, onClose }: EventDisplayProps) {
           className="relative px-5 sm:px-6 pt-6 pb-5 border-b border-white/10"
         >
           <div className="flex items-start justify-between gap-4">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white leading-tight pr-10 max-w-[70ch]">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold text-white leading-tight pr-10">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="flex-shrink-0 p-2 rounded-lg text-white hover:text-gray-300 hover:bg-white/10 transition"
+              className="flex-shrink-0 p-2.5 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all border border-white/0 hover:border-white/10"
               aria-label="Close modal"
             >
-              <X size={22} />
+              <X size={24} />
             </button>
           </div>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -203,27 +203,29 @@ export default function EventDisplay({ event, onClose }: EventDisplayProps) {
         </motion.div>
 
         {/* Content + Media */}
-        <div className="flex flex-col lg:flex-row gap-6 p-6">
+        <div className="flex flex-col lg:flex-row gap-8 p-6 sm:p-8">
           {/* Media */}
           {(imageUrl || videoUrl) && (
             <motion.div
               variants={itemVariants}
-              className="order-1 lg:order-2 flex-shrink-0 lg:w-110 mb-4 lg:mb-0"
+              className="order-1 lg:order-2 flex-shrink-0 lg:w-96 mb-2 lg:mb-0"
             >
               <div className="sticky top-6">
-                <div className="w-full aspect-video bg-black/50 rounded-lg overflow-hidden flex items-center justify-center">
+                <div
+                  className={`w-full aspect-video bg-black/50 rounded-xl overflow-hidden flex items-center justify-center border border-white/10 ${imageUrl ? 'cursor-zoom-in' : ''} group relative`}
+                  onClick={() => imageUrl && setIsImageOpen(true)}
+                >
                   <AnimatePresence mode="wait">
                     {imageUrl && (
                       <motion.img
                         key="image"
                         src={imageUrl}
                         alt={`${title} screenshot`}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
-                        onClick={() => setIsImageOpen(true)}
                       />
                     )}
                     {videoUrl && !imageUrl && (
@@ -239,29 +241,16 @@ export default function EventDisplay({ event, onClose }: EventDisplayProps) {
                       />
                     )}
                   </AnimatePresence>
+
+                  {imageUrl && (
+                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-medium border border-white/20">
+                        Click to expand
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <AnimatePresence>
-                {isImageOpen && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-6"
-                    onClick={() => setIsImageOpen(false)}
-                  >
-                    <motion.img
-                      src={imageUrl ?? ''}
-                      alt={`${title} fullscreen`}
-                      initial={{ scale: 0.95 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0.95 }}
-                      className="max-w-[95vw] max-h-[90vh] object-contain cursor-zoom-out"
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </motion.div>
           )}
 
@@ -270,21 +259,24 @@ export default function EventDisplay({ event, onClose }: EventDisplayProps) {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="order-2 lg:order-1 flex-1 space-y-6"
+            className="order-2 lg:order-1 flex-1 space-y-8"
           >
             <motion.div variants={itemVariants}>
               <Section title="Overview">
-                <p className="max-w-[60ch] leading-relaxed">{content.overview}</p>
+                <p className="max-w-[60ch] text-lg text-white/80 leading-relaxed font-light">
+                  {content.overview}
+                </p>
               </Section>
             </motion.div>
 
             {content.keyFeatures.length > 0 && (
               <motion.div variants={itemVariants}>
                 <Section title="Key Features">
-                  <ul className="list-disc list-inside space-y-2 max-w-[60ch]">
+                  <ul className="grid grid-cols-1 gap-3 max-w-[60ch]">
                     {content.keyFeatures.map((feature, index) => (
-                      <li key={index} className="leading-relaxed">
-                        {feature}
+                      <li key={index} className="flex items-start gap-3 text-white/80">
+                        <span className="mt-2 w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                        <span className="leading-relaxed">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -295,11 +287,11 @@ export default function EventDisplay({ event, onClose }: EventDisplayProps) {
             {content.techStack.length > 0 && (
               <motion.div variants={itemVariants}>
                 <Section title="Tech Stack">
-                  <div className="flex flex-wrap gap-2 max-w-[60ch]">
+                  <div className="flex flex-wrap gap-2.5 max-w-[60ch]">
                     {content.techStack.map((tech, index) => (
                       <span
                         key={index}
-                        className="px-3 py-1 rounded-full bg-white/10 text-white text-sm border border-white/20"
+                        className="px-4 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/90 text-sm border border-white/10 transition-colors"
                       >
                         {tech}
                       </span>
@@ -311,6 +303,38 @@ export default function EventDisplay({ event, onClose }: EventDisplayProps) {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Fullscreen Image Overlay - Moved outside the modal content to escape transform constraints */}
+      <AnimatePresence>
+        {isImageOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 md:p-12 lg:p-20"
+            onClick={() => setIsImageOpen(false)}
+          >
+            <motion.img
+              src={imageUrl ?? ''}
+              alt={`${title} fullscreen`}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="max-w-full max-h-full object-contain cursor-zoom-out shadow-2xl rounded-sm"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            <button
+              onClick={() => setIsImageOpen(false)}
+              className="absolute top-8 right-8 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all border border-white/10 hover:scale-110 active:scale-95"
+              aria-label="Close fullscreen view"
+            >
+              <X size={28} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

@@ -37,7 +37,7 @@ export const PORTFOLIO_CONFIG = {
   // Nebula cluster metadata
   CLUSTERS: {
     1: { name: 'Hackathons', color: 'from-purple-500 via-pink-500 to-blue-500' },
-    2: { name: 'Startups', color: 'from-blue-500 via-cyan-500 to-teal-500' },
+    2: { name: 'Projects', color: 'from-blue-500 via-cyan-500 to-teal-500' },
     3: { name: 'Work', color: 'from-orange-500 via-red-500 to-pink-500' },
   },
 
