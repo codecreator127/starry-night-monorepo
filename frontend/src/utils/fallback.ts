@@ -118,7 +118,7 @@ export const FALLBACK_EVENTS: Event[] = [
     id: 12,
     title: 'EROAD Project III',
     description:
-      'A new walkie talkie feature that involved processing audit logs, audio storage and handling, and idempotent handling of walkie talkie requests. Key features: Walkie Talkie intercom and with dashcams, . Tech stack: Java, Spring Boot, CloudFront, S3, SQS, Lambda, GitHub Actions, Concourse',
+      'A new walkie talkie feature that involved processing audit logs, audio storage and handling, and idempotent handling of walkie talkie requests. Including midway transition from V1 to V2 deployment method and completion under pressure. Key features: Walkie Talkie intercom, dashcam integration. Tech stack: Java, Spring Boot, CloudFront, S3, SQS, Lambda, GitHub Actions, Concourse.',
     imageUrl: '/walkie-talkie.png',
     videoUrl: null,
     clusterId: 3,
